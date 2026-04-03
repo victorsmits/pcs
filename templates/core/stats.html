@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3 text-white mb-4">
+        <i class="bi bi-bar-chart-fill text-warning me-2"></i>Statistiques globales {{ current_year }}
+    </h1>
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary"><h6 class="mb-0 text-warning">Coureurs par nationalité</h6></div>
+                <div class="card-body">
+                    <canvas id="nationalityChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary"><h6 class="mb-0 text-warning">Courses par classification</h6></div>
+                <div class="card-body">
+                    <canvas id="classificationChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const natData = {{ rider_nationalities|safe }};
+const classData = {{ race_classifications|safe }};
+
+new Chart(document.getElementById('nationalityChart'), {
+    type: 'bar',
+    data: {
+        labels: natData.map(d => d.nationality),
+        datasets: [{ label: 'Coureurs', data: natData.map(d => d.count), backgroundColor: '#f39c12' }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('classificationChart'), {
+    type: 'doughnut',
+    data: {
+        labels: classData.map(d => d.classification),
+        datasets: [{ data: classData.map(d => d.count), backgroundColor: ['#e74c3c','#3498db','#2ecc71','#f39c12','#9b59b6','#1abc9c','#e67e22','#95a5a6','#34495e','#16a085'] }]
+    },
+    options: { responsive: true }
+});
+</script>
+{% endblock %}

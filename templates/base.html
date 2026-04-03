@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title|default:"CycloStats" }}{% endblock %} | CycloStats</title>
+    <meta name="description" content="{% block meta_description %}La référence du cyclisme professionnel - statistiques, résultats, coureurs, équipes{% endblock %}">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- Flag Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/flag-icons@7.2.3/css/flag-icons.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    {% load static %}
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-warning border-2 sticky-top shadow">
+    <div class="container-fluid px-3">
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-warning" href="{% url 'core:home' %}">
+            <i class="bi bi-bicycle fs-4"></i>
+            <span>CycloStats</span>
+        </a>
+
+        <!-- Mobile Toggle -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNav">
+            <!-- Main Links -->
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.app_name == 'races' %}active text-warning{% endif %}"
+                       href="{% url 'races:race_list' %}">
+                        <i class="bi bi-trophy me-1"></i>Courses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.app_name == 'riders' %}active text-warning{% endif %}"
+                       href="{% url 'riders:rider_list' %}">
+                        <i class="bi bi-person-badge me-1"></i>Coureurs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.app_name == 'teams' %}active text-warning{% endif %}"
+                       href="{% url 'teams:team_list' %}">
+                        <i class="bi bi-people me-1"></i>Équipes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.app_name == 'rankings' %}active text-warning{% endif %}"
+                       href="{% url 'rankings:individual_rankings' %}">
+                        <i class="bi bi-bar-chart-line me-1"></i>Classements
+                    </a>
+                </li>
+                <!-- Year Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-calendar3 me-1"></i>{{ current_year }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-dark">
+                        {% for y in nav_years %}
+                        <li>
+                            <a class="dropdown-item" href="{% url 'races:race_list' %}?year={{ y }}">
+                                Saison {{ y }}
+                            </a>
+                        </li>
+                        {% endfor %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'races:race_calendar' %}">
+                                <i class="bi bi-calendar-range me-1"></i>Calendrier complet
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'riders:rider_compare' %}">
+                        <i class="bi bi-arrow-left-right me-1"></i>Comparer
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Search Bar -->
+            <form class="d-flex me-2 position-relative" id="navSearchForm" action="{% url 'core:search' %}" method="get">
+                <div class="input-group input-group-sm" style="min-width:260px;">
+                    <input class="form-control bg-dark border-secondary text-white"
+                           type="search" name="q" id="navSearch"
+                           placeholder="Coureur, course, équipe..."
+                           autocomplete="off"
+                           value="{{ request.GET.q|default:'' }}">
+                    <button class="btn btn-warning btn-sm" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <!-- Autocomplete dropdown -->
+                <div id="searchSuggestions" class="dropdown-menu dropdown-menu-dark w-100 shadow"
+                     style="display:none; position:absolute; top:100%; left:0; z-index:1050; max-height:350px; overflow-y:auto;">
+                </div>
+            </form>
+
+            <!-- Admin link -->
+            {% if user.is_staff %}
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/" target="_blank">
+                <i class="bi bi-gear"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- MESSAGES -->
+{% if messages %}
+<div class="container-fluid px-3 mt-2">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show mb-1" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- MAIN CONTENT -->
+<main class="flex-grow-1">
+    {% block breadcrumb %}{% endblock %}
+    {% block content %}{% endblock %}
+</main>
+
+<!-- FOOTER -->
+<footer class="bg-dark border-top border-secondary mt-auto py-4">
+    <div class="container">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <h6 class="text-warning fw-bold">
+                    <i class="bi bi-bicycle me-2"></i>CycloStats
+                </h6>
+                <p class="text-secondary small mb-0">
+                    La référence du cyclisme professionnel.<br>
+                    Données issues de <a href="https://www.procyclingstats.com" target="_blank" class="text-warning">procyclingstats.com</a>
+                    via <a href="https://pypi.org/project/pcs-scraper/" target="_blank" class="text-warning">pcs-scraper</a>.
+                </p>
+            </div>
+            <div class="col-md-2">
+                <h6 class="text-white-50 small text-uppercase fw-bold">Courses</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'races:race_list' %}" class="text-secondary text-decoration-none">Toutes les courses</a></li>
+                    <li><a href="{% url 'races:race_calendar' %}" class="text-secondary text-decoration-none">Calendrier</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="text-white-50 small text-uppercase fw-bold">Coureurs</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'riders:rider_list' %}" class="text-secondary text-decoration-none">Tous les coureurs</a></li>
+                    <li><a href="{% url 'riders:rider_compare' %}" class="text-secondary text-decoration-none">Comparaison</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="text-white-50 small text-uppercase fw-bold">Équipes</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'teams:team_list' %}" class="text-secondary text-decoration-none">Toutes les équipes</a></li>
+                </ul>
+            </div>
+            <div class="col-md-2">
+                <h6 class="text-white-50 small text-uppercase fw-bold">Classements</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'rankings:individual_rankings' %}" class="text-secondary text-decoration-none">Individuel</a></li>
+                    <li><a href="{% url 'rankings:team_rankings' %}" class="text-secondary text-decoration-none">Équipes</a></li>
+                    <li><a href="/api/" class="text-secondary text-decoration-none">API REST</a></li>
+                </ul>
+            </div>
+        </div>
+        <hr class="border-secondary mt-3 mb-2">
+        <div class="d-flex justify-content-between align-items-center">
+            <p class="text-secondary small mb-0">© {{ current_year }} CycloStats — Données non officielles</p>
+            <div class="d-flex gap-3">
+                <a href="{% url 'core:about' %}" class="text-secondary small text-decoration-none">À propos</a>
+                <a href="/api/" class="text-secondary small text-decoration-none">API</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Custom JS -->
+<script src="{% static 'js/main.js' %}"></script>
+
+{% block extra_js %}{% endblock %}
+
+<!-- Search Autocomplete -->
+<script>
+(function() {
+    const input = document.getElementById('navSearch');
+    const box = document.getElementById('searchSuggestions');
+    if (!input || !box) return;
+
+    let timer = null;
+    const typeIcons = { rider: 'bi-person-badge', race: 'bi-trophy', team: 'bi-people' };
+    const typeLabels = { rider: 'Coureur', race: 'Course', team: 'Équipe' };
+
+    input.addEventListener('input', function() {
+        clearTimeout(timer);
+        const q = this.value.trim();
+        if (q.length < 2) { box.style.display = 'none'; return; }
+        timer = setTimeout(() => {
+            fetch(`/search/autocomplete/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.suggestions.length) { box.style.display = 'none'; return; }
+                    box.innerHTML = data.suggestions.map(s => `
+                        <a href="${s.url}" class="dropdown-item d-flex align-items-center gap-2 py-2">
+                            <i class="bi ${typeIcons[s.type] || 'bi-search'} text-warning"></i>
+                            <div>
+                                <div class="fw-semibold">${s.name}</div>
+                                <small class="text-secondary">${typeLabels[s.type] || s.type}${s.subtitle ? ' · ' + s.subtitle : ''}</small>
+                            </div>
+                        </a>`).join('');
+                    box.style.display = 'block';
+                });
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!input.contains(e.target)) box.style.display = 'none';
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block content %}
+<!-- HERO BANNER -->
+<div class="hero-banner py-5 mb-4">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold text-white mb-2">
+                    <i class="bi bi-bicycle text-warning me-2"></i>CycloStats
+                </h1>
+                <p class="lead text-white-50 mb-4">
+                    La référence du cyclisme professionnel — résultats, statistiques, coureurs et équipes en temps réel.
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <a href="{% url 'races:race_list' %}" class="btn btn-warning fw-bold px-4">
+                        <i class="bi bi-trophy me-2"></i>Voir les courses
+                    </a>
+                    <a href="{% url 'riders:rider_list' %}" class="btn btn-outline-light px-4">
+                        <i class="bi bi-person-badge me-2"></i>Coureurs
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="row g-3">
+                    <div class="col-4">
+                        <div class="stat-card text-center p-3 rounded-3 bg-dark bg-opacity-50 border border-warning border-opacity-25">
+                            <div class="display-6 fw-bold text-warning">{{ stats.total_riders|intcomma }}</div>
+                            <div class="text-white-50 small">Coureurs</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card text-center p-3 rounded-3 bg-dark bg-opacity-50 border border-warning border-opacity-25">
+                            <div class="display-6 fw-bold text-warning">{{ stats.total_races|intcomma }}</div>
+                            <div class="text-white-50 small">Courses {{ current_year }}</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="stat-card text-center p-3 rounded-3 bg-dark bg-opacity-50 border border-warning border-opacity-25">
+                            <div class="display-6 fw-bold text-warning">{{ stats.total_teams|intcomma }}</div>
+                            <div class="text-white-50 small">Équipes {{ current_year }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+
+    <!-- ONGOING RACES -->
+    {% if ongoing_races %}
+    <section class="mb-5">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 animate-pulse">
+                <i class="bi bi-circle-fill me-1" style="font-size:.5em;vertical-align:middle;"></i>EN DIRECT
+            </span>
+            <h2 class="h4 mb-0 text-white">Courses en cours</h2>
+        </div>
+        <div class="row g-3">
+            {% for race in ongoing_races %}
+            <div class="col-md-4">
+                <div class="card bg-dark border-danger border-opacity-50 h-100 card-hover">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-danger small">{{ race.classification }}</span>
+                            {% if race.flag_code != 'xx' %}
+                            <span class="fi fi-{{ race.flag_code }}" title="{{ race.country_name }}"></span>
+                            {% endif %}
+                        </div>
+                        <h5 class="card-title text-white mb-1">
+                            <a href="{{ race.get_absolute_url }}" class="text-decoration-none text-white stretched-link">
+                                {{ race.name }}
+                            </a>
+                        </h5>
+                        <p class="text-secondary small mb-0">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            {{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- LEFT: Recent races + upcoming -->
+        <div class="col-lg-8">
+
+            <!-- RECENT RESULTS -->
+            <section class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0 text-white">
+                        <i class="bi bi-flag-fill text-warning me-2"></i>Derniers résultats
+                    </h2>
+                    <a href="{% url 'races:race_list' %}" class="btn btn-sm btn-outline-warning">
+                        Tout voir <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+                {% if recent_races %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-sm align-middle mb-0">
+                        <thead class="text-warning">
+                            <tr>
+                                <th>Course</th>
+                                <th>Date</th>
+                                <th>Cat.</th>
+                                <th>Vainqueur</th>
+                                <th>Équipe</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for race in recent_races %}
+                            <tr>
+                                <td>
+                                    <a href="{{ race.get_absolute_url }}" class="text-white text-decoration-none fw-semibold">
+                                        {% if race.flag_code != 'xx' %}
+                                        <span class="fi fi-{{ race.flag_code }} me-1" style="font-size:.85em;"></span>
+                                        {% endif %}
+                                        {{ race.name }}
+                                    </a>
+                                </td>
+                                <td class="text-secondary small">{{ race.end_date|date:"d M" }}</td>
+                                <td>
+                                    <span class="badge bg-secondary bg-opacity-50 text-light small">{{ race.classification }}</span>
+                                </td>
+                                <td>
+                                    {% if race.winner %}
+                                    <a href="{{ race.winner.get_absolute_url }}" class="text-warning text-decoration-none small">
+                                        {{ race.winner.name }}
+                                    </a>
+                                    {% else %}
+                                    <span class="text-secondary small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary small">
+                                    {% if race.winner_team %}{{ race.winner_team.name }}{% else %}—{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-secondary">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Aucune course récente. <a href="{% url 'races:race_fetch' slug='tour-de-france' year=current_year %}" class="alert-link">Charger les données</a>
+                </div>
+                {% endif %}
+            </section>
+
+            <!-- UPCOMING RACES -->
+            <section class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0 text-white">
+                        <i class="bi bi-calendar-event text-info me-2"></i>Prochaines courses
+                    </h2>
+                    <a href="{% url 'races:race_calendar' %}" class="btn btn-sm btn-outline-info">
+                        Calendrier <i class="bi bi-calendar3 ms-1"></i>
+                    </a>
+                </div>
+                {% if upcoming_races %}
+                <div class="row g-2">
+                    {% for race in upcoming_races %}
+                    <div class="col-sm-6 col-lg-4">
+                        <div class="card bg-dark border-secondary card-hover h-100">
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span class="badge
+                                        {% if race.is_grand_tour %}bg-danger
+                                        {% elif race.is_monument %}bg-warning text-dark
+                                        {% elif '1.UWT' in race.classification %}bg-primary
+                                        {% else %}bg-secondary{% endif %} small">
+                                        {{ race.classification|default:"—" }}
+                                    </span>
+                                    <small class="text-info">{{ race.start_date|date:"d M" }}</small>
+                                </div>
+                                <h6 class="mb-0">
+                                    <a href="{{ race.get_absolute_url }}" class="text-white text-decoration-none small fw-semibold">
+                                        {% if race.flag_code != 'xx' %}
+                                        <span class="fi fi-{{ race.flag_code }} me-1" style="font-size:.75em;"></span>
+                                        {% endif %}
+                                        {{ race.name }}
+                                    </a>
+                                </h6>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-secondary">Aucune course à venir enregistrée.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <!-- RIGHT: Rankings sidebar -->
+        <div class="col-lg-4">
+            <!-- Top Riders -->
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-warning">
+                        <i class="bi bi-star-fill me-2"></i>Top Coureurs
+                    </h6>
+                    <a href="{% url 'rankings:individual_rankings' %}" class="btn btn-sm btn-link text-warning p-0">
+                        Tout <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if top_riders %}
+                    <div class="list-group list-group-flush">
+                        {% for rider in top_riders %}
+                        <a href="{{ rider.get_absolute_url }}"
+                           class="list-group-item list-group-item-action bg-dark border-secondary d-flex align-items-center gap-3 py-2">
+                            <span class="text-warning fw-bold" style="min-width:1.8rem;text-align:right;">
+                                {% if rider.pcs_rank %}{{ rider.pcs_rank }}{% else %}—{% endif %}
+                            </span>
+                            {% if rider.flag_code != 'xx' %}
+                            <span class="fi fi-{{ rider.flag_code }}" style="font-size:.9em;"></span>
+                            {% endif %}
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="text-white small text-truncate">{{ rider.name }}</div>
+                                <div class="text-secondary" style="font-size:.7rem;">
+                                    {{ rider.current_team.name|default:"—" }}
+                                </div>
+                            </div>
+                            <span class="text-secondary small">{{ rider.pcs_points|intcomma }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-3 text-center">
+                        <p class="text-secondary small mb-2">Aucun classement disponible.</p>
+                        <a href="{% url 'rankings:individual_rankings' %}" class="btn btn-sm btn-outline-warning">Charger</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Top Teams -->
+            {% if top_teams %}
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-warning">
+                        <i class="bi bi-people-fill me-2"></i>Top Équipes {{ current_year }}
+                    </h6>
+                    <a href="{% url 'rankings:team_rankings' %}" class="btn btn-sm btn-link text-warning p-0">
+                        Tout <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for team in top_teams %}
+                        <a href="{{ team.get_absolute_url }}"
+                           class="list-group-item list-group-item-action bg-dark border-secondary d-flex align-items-center gap-3 py-2">
+                            <span class="text-warning fw-bold" style="min-width:1.8rem;text-align:right;">
+                                {{ team.team_rank|default:"—" }}
+                            </span>
+                            {% if team.flag_code != 'xx' %}
+                            <span class="fi fi-{{ team.flag_code }}" style="font-size:.9em;"></span>
+                            {% endif %}
+                            <div class="flex-grow-1 overflow-hidden">
+                                <div class="text-white small text-truncate">{{ team.name }}</div>
+                                <div class="text-secondary" style="font-size:.7rem;">{{ team.status }}</div>
+                            </div>
+                            <span class="text-secondary small">{{ team.points|floatformat:0|intcomma }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <section class="mt-4">
+        <h2 class="h5 text-white mb-3">
+            <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Accès rapide
+        </h2>
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <a href="{% url 'races:race_list' %}?type=grand_tour" class="card bg-dark border-danger text-decoration-none card-hover h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="bi bi-trophy-fill text-danger fs-3 d-block mb-2"></i>
+                        <div class="text-white small fw-bold">Grands Tours</div>
+                        <div class="text-secondary" style="font-size:.75rem;">TDF, Giro, Vuelta</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'races:race_list' %}?type=monument" class="card bg-dark border-warning text-decoration-none card-hover h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="bi bi-gem text-warning fs-3 d-block mb-2"></i>
+                        <div class="text-white small fw-bold">Monuments</div>
+                        <div class="text-secondary" style="font-size:.75rem;">Roubaix, Flandres...</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="{% url 'riders:rider_compare' %}" class="card bg-dark border-info text-decoration-none card-hover h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="bi bi-arrow-left-right text-info fs-3 d-block mb-2"></i>
+                        <div class="text-white small fw-bold">Comparer</div>
+                        <div class="text-secondary" style="font-size:.75rem;">Coureur vs coureur</div>
+                    </div>
+                </a>
+            </div>
+            <div class="col-6 col-md-3">
+                <a href="/api/" class="card bg-dark border-success text-decoration-none card-hover h-100">
+                    <div class="card-body text-center py-3">
+                        <i class="bi bi-code-slash text-success fs-3 d-block mb-2"></i>
+                        <div class="text-white small fw-bold">API REST</div>
+                        <div class="text-secondary" style="font-size:.75rem;">Accès programmatique</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

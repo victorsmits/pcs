@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'riders:rider_list' %}" class="text-secondary">Coureurs</a></li>
+                <li class="breadcrumb-item active text-white">Comparaison</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="h3 text-white mb-4">
+        <i class="bi bi-arrow-left-right text-warning me-2"></i>Comparer deux coureurs
+    </h1>
+
+    <!-- Selector -->
+    <form method="get" class="card bg-dark border-secondary mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label text-secondary small">Coureur 1</label>
+                    <input list="ridersList" class="form-control bg-dark border-secondary text-white"
+                           name="rider1" value="{{ rider1.name|default:rider1_slug }}" placeholder="Nom du coureur...">
+                </div>
+                <div class="col-md-1 text-center pb-1">
+                    <span class="text-warning fs-4 fw-bold">VS</span>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label text-secondary small">Coureur 2</label>
+                    <input list="ridersList" class="form-control bg-dark border-secondary text-white"
+                           name="rider2" value="{{ rider2.name|default:rider2_slug }}" placeholder="Nom du coureur...">
+                </div>
+                <div class="col-md-1">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <datalist id="ridersList">
+                {% for r in all_riders %}
+                <option value="{{ r.name }}" data-slug="{{ r.slug }}">
+                {% endfor %}
+            </datalist>
+        </div>
+    </form>
+
+    <!-- Comparison -->
+    {% if rider1 and rider2 and comparison %}
+    <div class="row g-4">
+        <!-- Left rider -->
+        <div class="col-md-5 text-center">
+            {% if rider1.photo_url %}
+            <img src="{{ rider1.photo_url }}" class="rounded-circle mb-3 border border-warning border-3" style="width:90px;height:90px;object-fit:cover;">
+            {% endif %}
+            <h4 class="text-white">
+                <a href="{{ rider1.get_absolute_url }}" class="text-white text-decoration-none">{{ rider1.name }}</a>
+            </h4>
+            {% if rider1.flag_code != 'xx' %}<span class="fi fi-{{ rider1.flag_code }} me-1"></span>{% endif %}
+            <span class="text-secondary small">{{ rider1.get_nationality_display|default:rider1.nationality }}</span>
+        </div>
+        <div class="col-md-2 d-flex align-items-center justify-content-center">
+            <span class="text-warning display-5 fw-bold">VS</span>
+        </div>
+        <!-- Right rider -->
+        <div class="col-md-5 text-center">
+            {% if rider2.photo_url %}
+            <img src="{{ rider2.photo_url }}" class="rounded-circle mb-3 border border-info border-3" style="width:90px;height:90px;object-fit:cover;">
+            {% endif %}
+            <h4 class="text-white">
+                <a href="{{ rider2.get_absolute_url }}" class="text-white text-decoration-none">{{ rider2.name }}</a>
+            </h4>
+            {% if rider2.flag_code != 'xx' %}<span class="fi fi-{{ rider2.flag_code }} me-1"></span>{% endif %}
+            <span class="text-secondary small">{{ rider2.get_nationality_display|default:rider2.nationality }}</span>
+        </div>
+    </div>
+
+    <!-- Stats comparison table -->
+    <div class="card bg-dark border-secondary mt-4">
+        <div class="card-body p-0">
+            <table class="table table-dark table-sm align-middle mb-0">
+                <tbody>
+                    {% with s1=comparison.rider1 s2=comparison.rider2 %}
+                    {% for label, key in "Classement PCS,pcs_rank|Points PCS,pcs_points|Victoires,wins|Podiums,podiums|Top 10,top10|Grands Tours,grand_tours|Monuments,monuments"|split:"|" %}
+                    {% with val=label|slice:"0:" %}
+                    {% endwith %}
+                    {% endfor %}
+                    <tr>
+                        <td class="text-end fw-bold {% if s1.pcs_rank <= s2.pcs_rank %}text-warning{% else %}text-white{% endif %}">
+                            {{ rider1.pcs_rank|default:"—" }}
+                        </td>
+                        <td class="text-center text-secondary small py-3">Classement PCS</td>
+                        <td class="text-start fw-bold {% if s2.pcs_rank <= s1.pcs_rank %}text-warning{% else %}text-white{% endif %}">
+                            {{ rider2.pcs_rank|default:"—" }}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-end fw-bold {% if s1.pcs_points >= s2.pcs_points %}text-warning{% else %}text-white{% endif %}">{{ s1.pcs_points }}</td>
+                        <td class="text-center text-secondary small">Points PCS</td>
+                        <td class="text-start fw-bold {% if s2.pcs_points >= s1.pcs_points %}text-warning{% else %}text-white{% endif %}">{{ s2.pcs_points }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end fw-bold {% if s1.wins >= s2.wins %}text-warning{% else %}text-white{% endif %}">{{ s1.wins }}</td>
+                        <td class="text-center text-secondary small">Victoires</td>
+                        <td class="text-start fw-bold {% if s2.wins >= s1.wins %}text-warning{% else %}text-white{% endif %}">{{ s2.wins }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end {% if s1.podiums >= s2.podiums %}text-warning{% else %}text-white{% endif %}">{{ s1.podiums }}</td>
+                        <td class="text-center text-secondary small">Podiums</td>
+                        <td class="text-start {% if s2.podiums >= s1.podiums %}text-warning{% else %}text-white{% endif %}">{{ s2.podiums }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end {% if s1.top10 >= s2.top10 %}text-warning{% else %}text-white{% endif %}">{{ s1.top10 }}</td>
+                        <td class="text-center text-secondary small">Top 10</td>
+                        <td class="text-start {% if s2.top10 >= s1.top10 %}text-warning{% else %}text-white{% endif %}">{{ s2.top10 }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end {% if s1.grand_tours >= s2.grand_tours %}text-warning{% else %}text-white{% endif %}">{{ s1.grand_tours }}</td>
+                        <td class="text-center text-secondary small">Grands Tours gagnés</td>
+                        <td class="text-start {% if s2.grand_tours >= s1.grand_tours %}text-warning{% else %}text-white{% endif %}">{{ s2.grand_tours }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-end {% if s1.monuments >= s2.monuments %}text-warning{% else %}text-white{% endif %}">{{ s1.monuments }}</td>
+                        <td class="text-center text-secondary small">Monuments gagnés</td>
+                        <td class="text-start {% if s2.monuments >= s1.monuments %}text-warning{% else %}text-white{% endif %}">{{ s2.monuments }}</td>
+                    </tr>
+                    {% endwith %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+        <div class="col-6 text-center">
+            <a href="{{ rider1.get_absolute_url }}" class="btn btn-outline-warning">
+                <i class="bi bi-person me-1"></i>Voir {{ rider1.name }}
+            </a>
+        </div>
+        <div class="col-6 text-center">
+            <a href="{{ rider2.get_absolute_url }}" class="btn btn-outline-info">
+                <i class="bi bi-person me-1"></i>Voir {{ rider2.name }}
+            </a>
+        </div>
+    </div>
+    {% elif rider1_slug or rider2_slug %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        Un ou deux coureurs introuvables. Vérifiez les noms ou
+        <a href="{% url 'riders:rider_fetch' slug=rider1_slug %}" class="alert-link">importez les données</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

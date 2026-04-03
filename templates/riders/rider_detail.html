@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'riders:rider_list' %}" class="text-secondary">Coureurs</a></li>
+                <li class="breadcrumb-item active text-white">{{ rider.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Profile Header -->
+    <div class="card bg-dark border-secondary mb-4 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="row g-0">
+                <!-- Photo -->
+                <div class="col-auto d-flex align-items-center justify-content-center p-4" style="min-width:140px;background:rgba(255,255,255,.03);">
+                    {% if rider.photo_url %}
+                    <img src="{{ rider.photo_url }}" alt="{{ rider.name }}"
+                         class="rounded-3 shadow" style="width:110px;height:130px;object-fit:cover;">
+                    {% else %}
+                    <div class="rounded-3 bg-secondary d-flex align-items-center justify-content-center"
+                         style="width:110px;height:130px;">
+                        <i class="bi bi-person-fill text-dark" style="font-size:3rem;"></i>
+                    </div>
+                    {% endif %}
+                </div>
+                <!-- Main Info -->
+                <div class="col p-4">
+                    <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                        <div>
+                            <h1 class="h2 text-white mb-1 fw-bold">{{ rider.name }}</h1>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                {% if rider.flag_code != 'xx' %}
+                                <span class="fi fi-{{ rider.flag_code }}" style="font-size:1.3em;"></span>
+                                {% endif %}
+                                <span class="text-secondary">{{ rider.get_nationality_display|default:rider.nationality }}</span>
+                                {% if rider.specialty %}
+                                <span class="badge bg-warning text-dark">{{ rider.get_specialty_display }}</span>
+                                {% endif %}
+                                {% if not rider.is_active %}
+                                <span class="badge bg-secondary">Retraité</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'riders:rider_fetch' slug=rider.slug %}" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+                            </a>
+                            {% if rider.pcs_url %}
+                            <a href="{{ rider.pcs_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i>PCS
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Bio grid -->
+                    <div class="row g-2 mt-1">
+                        {% if rider.date_of_birth %}
+                        <div class="col-auto">
+                            <span class="text-secondary small"><i class="bi bi-cake me-1"></i>{{ rider.date_of_birth|date:"d/m/Y" }}</span>
+                            {% if rider.age %}<span class="text-secondary small"> ({{ rider.age }} ans)</span>{% endif %}
+                        </div>
+                        {% endif %}
+                        {% if rider.height %}
+                        <div class="col-auto">
+                            <span class="text-secondary small"><i class="bi bi-rulers me-1"></i>{{ rider.height|floatformat:0 }} cm</span>
+                        </div>
+                        {% endif %}
+                        {% if rider.weight %}
+                        <div class="col-auto">
+                            <span class="text-secondary small"><i class="bi bi-speedometer me-1"></i>{{ rider.weight|floatformat:0 }} kg</span>
+                        </div>
+                        {% endif %}
+                        {% if rider.current_team %}
+                        <div class="col-auto">
+                            <a href="{{ rider.current_team.get_absolute_url }}" class="text-warning text-decoration-none small">
+                                <i class="bi bi-people me-1"></i>{{ rider.current_team.name }}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <!-- Stats sidebar -->
+                <div class="col-auto border-start border-secondary p-4 d-flex flex-column justify-content-center gap-3" style="min-width:200px;background:rgba(255,255,255,.02);">
+                    {% if rider.pcs_rank %}
+                    <div class="text-center">
+                        <div class="display-6 fw-bold text-warning">#{{ rider.pcs_rank }}</div>
+                        <div class="text-secondary small">Classement PCS</div>
+                    </div>
+                    {% endif %}
+                    <div class="text-center">
+                        <div class="h4 fw-bold text-white">{{ rider.pcs_points|intcomma }}</div>
+                        <div class="text-secondary small">Points PCS</div>
+                    </div>
+                    {% if rider.uci_rank %}
+                    <div class="text-center">
+                        <div class="h5 fw-bold text-info">#{{ rider.uci_rank }}</div>
+                        <div class="text-secondary small">Classement UCI</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Career Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card bg-dark border-warning text-center py-3">
+                <div class="h2 fw-bold text-warning mb-0">{{ wins }}</div>
+                <div class="text-secondary small">Victoires</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-dark border-secondary text-center py-3">
+                <div class="h2 fw-bold text-white mb-0">{{ podiums }}</div>
+                <div class="text-secondary small">Podiums</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-dark border-secondary text-center py-3">
+                <div class="h2 fw-bold text-white mb-0">{{ top10 }}</div>
+                <div class="text-secondary small">Top 10</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card bg-dark border-secondary text-center py-3">
+                <div class="h2 fw-bold text-white mb-0">{{ total_results }}</div>
+                <div class="text-secondary small">Courses</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main: Race history -->
+        <div class="col-lg-8">
+            <!-- Chart -->
+            {% if wins_by_year %}
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header border-secondary">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-bar-chart me-2"></i>Victoires par saison</h6>
+                </div>
+                <div class="card-body py-2">
+                    <canvas id="winsChart" height="100"></canvas>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Filter by year -->
+            <div class="d-flex flex-wrap gap-2 mb-3 align-items-center">
+                <span class="text-secondary small">Filtrer par année :</span>
+                <a href="{{ request.path }}" class="btn btn-sm {% if not selected_year %}btn-warning{% else %}btn-outline-secondary{% endif %}">Tout</a>
+                {% for yr in years %}
+                <a href="{{ request.path }}?year={{ yr }}" class="btn btn-sm {% if selected_year == yr|stringformat:'s' %}btn-warning{% else %}btn-outline-secondary{% endif %}">{{ yr }}</a>
+                {% endfor %}
+            </div>
+
+            <!-- Results table -->
+            {% if results %}
+            <div class="table-responsive">
+                <table class="table table-dark table-hover table-sm align-middle">
+                    <thead class="text-warning">
+                        <tr>
+                            <th>Course</th>
+                            <th>Année</th>
+                            <th>Équipe</th>
+                            <th class="text-center">Résultat</th>
+                            <th class="text-end">Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for result in results %}
+                        <tr>
+                            <td>
+                                <a href="{{ result.race.get_absolute_url }}" class="text-white text-decoration-none">
+                                    {{ result.race.name }}
+                                </a>
+                                {% if result.race.is_grand_tour %}
+                                <span class="badge bg-danger ms-1 small">GT</span>
+                                {% elif result.race.is_monument %}
+                                <span class="badge bg-warning text-dark ms-1 small">Mon.</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-secondary">{{ result.year }}</td>
+                            <td class="text-secondary small">{{ result.team.name|default:"—" }}</td>
+                            <td class="text-center">
+                                {% if result.dnf %}<span class="badge bg-secondary">DNF</span>
+                                {% elif result.dns %}<span class="badge bg-dark border border-secondary text-secondary">DNS</span>
+                                {% elif result.dsq %}<span class="badge bg-danger">DSQ</span>
+                                {% elif result.rank == 1 %}<span class="badge bg-warning text-dark fw-bold">🥇 1er</span>
+                                {% elif result.rank == 2 %}<span class="badge bg-secondary">🥈 2ème</span>
+                                {% elif result.rank == 3 %}<span class="badge bg-warning bg-opacity-50 text-dark">🥉 3ème</span>
+                                {% elif result.rank %}<span class="text-white">{{ result.rank }}ème</span>
+                                {% else %}<span class="text-secondary">—</span>{% endif %}
+                            </td>
+                            <td class="text-end text-secondary small">{{ result.points|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% include "partials/_pagination.html" with page_obj=page_obj %}
+            {% else %}
+            <div class="alert alert-secondary">
+                <i class="bi bi-info-circle me-2"></i>
+                Aucun résultat disponible.
+                <a href="{% url 'riders:rider_fetch' slug=rider.slug %}" class="alert-link">Charger depuis PCS</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Palmares -->
+            {% if rider.grand_tour_wins or rider.monument_wins or rider.gc_wins %}
+            <div class="card bg-dark border-warning mb-4">
+                <div class="card-header border-warning">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-trophy-fill me-2"></i>Palmarès</h6>
+                </div>
+                <div class="card-body">
+                    {% if rider.grand_tour_wins %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">Grands Tours</span>
+                        <span class="badge bg-danger">{{ rider.grand_tour_wins }}x</span>
+                    </div>
+                    {% endif %}
+                    {% if rider.monument_wins %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">Monuments</span>
+                        <span class="badge bg-warning text-dark">{{ rider.monument_wins }}x</span>
+                    </div>
+                    {% endif %}
+                    {% if rider.gc_wins %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-secondary small">Victoires GC</span>
+                        <span class="badge bg-primary">{{ rider.gc_wins }}x</span>
+                    </div>
+                    {% endif %}
+                    {% if rider.stage_wins %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-secondary small">Étapes gagnées</span>
+                        <span class="badge bg-secondary">{{ rider.stage_wins }}x</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Team history -->
+            {% if team_history %}
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header border-secondary">
+                    <h6 class="mb-0 text-white"><i class="bi bi-clock-history me-2"></i>Historique équipes</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for roster in team_history %}
+                    <a href="{{ roster.team.get_absolute_url }}" class="list-group-item list-group-item-action bg-dark border-secondary d-flex justify-content-between align-items-center py-2">
+                        <span class="text-white small">{{ roster.team.name }}</span>
+                        <span class="badge bg-secondary">{{ roster.team.year }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Compare CTA -->
+            <div class="card bg-dark border-info">
+                <div class="card-body text-center py-3">
+                    <i class="bi bi-arrow-left-right text-info fs-3 d-block mb-2"></i>
+                    <p class="text-secondary small mb-2">Comparez {{ rider.name }} avec un autre coureur</p>
+                    <a href="{% url 'riders:rider_compare' %}?rider1={{ rider.slug }}" class="btn btn-sm btn-outline-info">
+                        Comparer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if wins_by_year %}
+<script>
+const winsData = {{ wins_by_year|safe }};
+new Chart(document.getElementById('winsChart'), {
+    type: 'bar',
+    data: {
+        labels: winsData.map(d => d.year),
+        datasets: [{
+            label: 'Victoires',
+            data: winsData.map(d => d.count),
+            backgroundColor: '#f39c12',
+            borderRadius: 4,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: { grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#aaa' } },
+            y: { beginAtZero: true, stepSize: 1, grid: { color: 'rgba(255,255,255,.05)' }, ticks: { color: '#aaa' } }
+        }
+    }
+});
+</script>
+{% endif %}
+{% endblock %}

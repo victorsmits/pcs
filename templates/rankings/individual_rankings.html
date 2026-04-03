@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item active text-white">Classement individuel</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-white mb-0">
+                <i class="bi bi-bar-chart-line text-warning me-2"></i>Classement individuel {{ year }}
+            </h1>
+            <p class="text-secondary small mb-0">{{ total_count|intcomma }} coureur{{ total_count|pluralize }}</p>
+        </div>
+        <a href="{% url 'rankings:team_rankings' %}?year={{ year }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-people me-1"></i>Classement équipes
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card bg-dark border-secondary mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1">Recherche</label>
+                    <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white"
+                           name="q" value="{{ search_q }}" placeholder="Nom du coureur...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Année</label>
+                    <select class="form-select form-select-sm bg-dark border-secondary text-white" name="year">
+                        {% for y in years_available %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Classement</label>
+                    <select class="form-select form-select-sm bg-dark border-secondary text-white" name="type">
+                        {% for val, label in ranking_types %}
+                        <option value="{{ val }}" {% if ranking_type == val %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Nationalité</label>
+                    <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white"
+                           name="nationality" value="{{ nationality }}" placeholder="ex: FRA">
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-warning btn-sm flex-grow-1">
+                        <i class="bi bi-search me-1"></i>Filtrer
+                    </button>
+                    <a href="{% url 'rankings:individual_rankings' %}?year={{ year }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if rankings %}
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead class="text-warning">
+                <tr>
+                    <th class="text-center" style="width:3.5rem;">Rang</th>
+                    <th class="text-center" style="width:2rem;">±</th>
+                    <th></th>
+                    <th>Coureur</th>
+                    <th>Nat.</th>
+                    <th>Équipe</th>
+                    <th class="text-end">Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ranking in rankings %}
+                <tr class="{% if ranking.rank <= 3 %}fw-semibold{% endif %}">
+                    <td class="text-center fw-bold
+                        {% if ranking.rank == 1 %}text-warning fs-5
+                        {% elif ranking.rank == 2 %}text-secondary
+                        {% elif ranking.rank == 3 %}text-warning opacity-75
+                        {% else %}text-secondary{% endif %}">
+                        {% if ranking.rank == 1 %}🥇
+                        {% elif ranking.rank == 2 %}🥈
+                        {% elif ranking.rank == 3 %}🥉
+                        {% else %}{{ ranking.rank }}{% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% with change=ranking.rank_change %}
+                        {% if change > 0 %}
+                        <span class="text-success small"><i class="bi bi-caret-up-fill"></i>{{ change }}</span>
+                        {% elif change < 0 %}
+                        <span class="text-danger small"><i class="bi bi-caret-down-fill"></i>{{ change|cut:"-" }}</span>
+                        {% elif change == 0 %}
+                        <span class="text-secondary small">—</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td>
+                        {% if ranking.rider.photo_url %}
+                        <img src="{{ ranking.rider.photo_url }}" class="rounded-circle" style="width:28px;height:28px;object-fit:cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width:28px;height:28px;">
+                            <i class="bi bi-person text-dark" style="font-size:.7rem;"></i>
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ ranking.rider.get_absolute_url }}" class="text-white text-decoration-none">
+                            {{ ranking.rider.name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if ranking.rider.flag_code != 'xx' %}
+                        <span class="fi fi-{{ ranking.rider.flag_code }}" title="{{ ranking.nationality }}"></span>
+                        {% else %}
+                        <span class="text-secondary small">{{ ranking.nationality }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-secondary small">
+                        {% if ranking.team %}
+                        <a href="{{ ranking.team.get_absolute_url }}" class="text-secondary text-decoration-none">{{ ranking.team.name }}</a>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-end fw-bold text-warning">{{ ranking.points|floatformat:0|intcomma }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/_pagination.html" with page_obj=page_obj %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bar-chart display-1 text-secondary opacity-25 d-block mb-3"></i>
+        <h4 class="text-secondary">Aucun classement disponible pour {{ year }}</h4>
+        <p class="text-secondary small">Utilisez <code>python manage.py sync_data --year {{ year }} --type rankings</code></p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

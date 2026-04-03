@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item active text-white">Courses</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 text-white mb-0">
+                <i class="bi bi-trophy text-warning me-2"></i>Courses {{ year }}
+            </h1>
+            <p class="text-secondary small mb-0">{{ total_count|intcomma }} course{{ total_count|pluralize }} trouvée{{ total_count|pluralize }}</p>
+        </div>
+        <a href="{% url 'races:race_calendar' %}?year={{ year }}" class="btn btn-outline-info btn-sm">
+            <i class="bi bi-calendar3 me-1"></i>Calendrier
+        </a>
+    </div>
+
+    <!-- Filters -->
+    <div class="card bg-dark border-secondary mb-4">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label text-secondary small mb-1">Recherche</label>
+                    <input type="text" class="form-control form-control-sm bg-dark border-secondary text-white"
+                           name="q" value="{{ search_q }}" placeholder="Nom de la course...">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Année</label>
+                    <select class="form-select form-select-sm bg-dark border-secondary text-white" name="year">
+                        {% for y in years_available %}
+                        <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Catégorie</label>
+                    <select class="form-select form-select-sm bg-dark border-secondary text-white" name="classification">
+                        <option value="">Toutes</option>
+                        {% for c in classifications %}{% if c %}
+                        <option value="{{ c }}" {% if classification == c %}selected{% endif %}>{{ c }}</option>
+                        {% endif %}{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label text-secondary small mb-1">Type</label>
+                    <select class="form-select form-select-sm bg-dark border-secondary text-white" name="type">
+                        <option value="all" {% if show_type == 'all' %}selected{% endif %}>Tous</option>
+                        <option value="grand_tour" {% if show_type == 'grand_tour' %}selected{% endif %}>Grands Tours</option>
+                        <option value="monument" {% if show_type == 'monument' %}selected{% endif %}>Monuments</option>
+                        <option value="stage" {% if show_type == 'stage' %}selected{% endif %}>Courses par étapes</option>
+                        <option value="oneday" {% if show_type == 'oneday' %}selected{% endif %}>Courses 1 jour</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-warning btn-sm flex-grow-1">
+                        <i class="bi bi-search me-1"></i>Filtrer
+                    </button>
+                    <a href="{% url 'races:race_list' %}?year={{ year }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Type badges -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% for label, val, color in "Tous,all,secondary|Grands Tours,grand_tour,danger|Monuments,monument,warning|Par étapes,stage,primary|1 jour,oneday,info"|split:"|" %}
+        {% endfor %}
+        <a href="?year={{ year }}&type=all{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'all' %}btn-warning{% else %}btn-outline-secondary{% endif %}">Tous</a>
+        <a href="?year={{ year }}&type=grand_tour{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'grand_tour' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+            <i class="bi bi-trophy-fill me-1"></i>Grands Tours
+        </a>
+        <a href="?year={{ year }}&type=monument{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'monument' %}btn-warning text-dark{% else %}btn-outline-warning{% endif %}">
+            <i class="bi bi-gem me-1"></i>Monuments
+        </a>
+        <a href="?year={{ year }}&type=stage{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'stage' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+            Par étapes
+        </a>
+        <a href="?year={{ year }}&type=oneday{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'oneday' %}btn-info text-dark{% else %}btn-outline-info{% endif %}">
+            1 jour
+        </a>
+    </div>
+
+    {% if races %}
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead class="text-warning">
+                <tr>
+                    <th>Course</th>
+                    <th>Dates</th>
+                    <th>Pays</th>
+                    <th>Cat.</th>
+                    <th>Vainqueur</th>
+                    <th>Équipe</th>
+                    <th class="text-center">Étapes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for race in races %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            {% if race.is_grand_tour %}
+                            <span class="badge bg-danger" title="Grand Tour">GT</span>
+                            {% elif race.is_monument %}
+                            <span class="badge bg-warning text-dark" title="Monument">⬦</span>
+                            {% endif %}
+                            <a href="{{ race.get_absolute_url }}" class="text-white text-decoration-none fw-semibold">
+                                {{ race.name }}
+                            </a>
+                        </div>
+                    </td>
+                    <td class="text-secondary small">
+                        {% if race.start_date %}{{ race.start_date|date:"d/m" }}{% endif %}
+                        {% if race.end_date and race.end_date != race.start_date %} – {{ race.end_date|date:"d/m" }}{% endif %}
+                    </td>
+                    <td>
+                        {% if race.flag_code != 'xx' %}
+                        <span class="fi fi-{{ race.flag_code }}" title="{{ race.country_name }}"></span>
+                        {% endif %}
+                        <span class="text-secondary small ms-1">{{ race.country_name }}</span>
+                    </td>
+                    <td>
+                        <span class="badge
+                            {% if race.is_grand_tour %}bg-danger
+                            {% elif race.is_monument %}bg-warning text-dark
+                            {% elif 'UWT' in race.classification %}bg-primary
+                            {% elif 'Pro' in race.classification %}bg-success
+                            {% else %}bg-secondary{% endif %} small">
+                            {{ race.classification|default:"—" }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if race.winner %}
+                        <a href="{{ race.winner.get_absolute_url }}" class="text-warning text-decoration-none small">
+                            {% if race.winner.flag_code != 'xx' %}
+                            <span class="fi fi-{{ race.winner.flag_code }}" style="font-size:.75em;"></span>
+                            {% endif %}
+                            {{ race.winner.name }}
+                        </a>
+                        {% else %}
+                        <span class="text-secondary small">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-secondary small">{{ race.winner_team.name|default:"—" }}</td>
+                    <td class="text-center">
+                        {% if race.stages_count > 1 %}
+                        <span class="badge bg-secondary bg-opacity-50">{{ race.stages_count }}</span>
+                        {% else %}
+                        <span class="text-secondary">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% include "partials/_pagination.html" with page_obj=page_obj %}
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-trophy display-1 text-secondary opacity-25 d-block mb-3"></i>
+        <h4 class="text-secondary">Aucune course trouvée</h4>
+        <p class="text-secondary small mb-3">
+            {% if search_q or classification %}Modifiez vos filtres ou{% endif %}
+            chargez les données via la commande de synchronisation.
+        </p>
+        <a href="/admin/" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-gear me-1"></i>Admin
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

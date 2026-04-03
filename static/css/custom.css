@@ -1,0 +1,250 @@
+/* ============================================================
+   CycloStats — Custom CSS
+   ============================================================ */
+
+:root {
+  --cs-yellow: #f39c12;
+  --cs-dark: #0d1117;
+  --cs-card: #161b22;
+  --cs-border: #30363d;
+  --cs-text-muted: #8b949e;
+}
+
+/* Body / Background */
+body {
+  background-color: var(--cs-dark);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* ─── Hero Banner ─────────────────────────────────────────── */
+.hero-banner {
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a2332 100%);
+  border-bottom: 2px solid var(--cs-yellow);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(243,156,18,.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* ─── Cards ───────────────────────────────────────────────── */
+.card {
+  background-color: var(--cs-card);
+  border-color: var(--cs-border) !important;
+  transition: border-color .2s ease, transform .15s ease, box-shadow .15s ease;
+}
+
+.card-hover:hover {
+  border-color: var(--cs-yellow) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(243,156,18,.12);
+  text-decoration: none;
+}
+
+/* ─── Tables ──────────────────────────────────────────────── */
+.table-dark {
+  --bs-table-bg: transparent;
+  --bs-table-border-color: var(--cs-border);
+  --bs-table-hover-bg: rgba(255,255,255,.04);
+  font-size: .875rem;
+}
+
+.table-dark thead th {
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  border-bottom: 1px solid var(--cs-yellow) !important;
+  padding-top: .6rem;
+  padding-bottom: .6rem;
+}
+
+.table-dark tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ─── Navbar ──────────────────────────────────────────────── */
+.navbar {
+  backdrop-filter: blur(12px);
+  background-color: rgba(13,17,23,.97) !important;
+}
+
+.navbar-nav .nav-link {
+  font-size: .875rem;
+  padding: .5rem .75rem;
+  border-radius: 6px;
+  transition: background .15s ease, color .15s ease;
+}
+
+.navbar-nav .nav-link:hover {
+  background: rgba(243,156,18,.1);
+  color: var(--cs-yellow) !important;
+}
+
+.navbar-nav .nav-link.active {
+  background: rgba(243,156,18,.15);
+}
+
+/* ─── Badges ──────────────────────────────────────────────── */
+.badge {
+  font-weight: 500;
+  letter-spacing: .02em;
+}
+
+/* ─── Stat Cards ──────────────────────────────────────────── */
+.stat-card {
+  transition: transform .15s ease;
+}
+
+.stat-card:hover {
+  transform: scale(1.02);
+}
+
+/* ─── Live Pulse ──────────────────────────────────────────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+.animate-pulse {
+  animation: pulse 1.8s ease-in-out infinite;
+}
+
+/* ─── List Groups ─────────────────────────────────────────── */
+.list-group-item {
+  font-size: .875rem;
+}
+
+.list-group-item-action:hover {
+  background: rgba(255,255,255,.04) !important;
+  border-color: var(--cs-border) !important;
+}
+
+/* ─── Breadcrumb ──────────────────────────────────────────── */
+.breadcrumb-item + .breadcrumb-item::before {
+  color: var(--cs-text-muted);
+}
+
+/* ─── Form Controls ───────────────────────────────────────── */
+.form-control, .form-select {
+  background-color: #0d1117 !important;
+  border-color: var(--cs-border) !important;
+  color: #e6edf3 !important;
+}
+
+.form-control:focus, .form-select:focus {
+  border-color: var(--cs-yellow) !important;
+  box-shadow: 0 0 0 3px rgba(243,156,18,.15) !important;
+  background-color: #0d1117 !important;
+}
+
+.form-control::placeholder {
+  color: var(--cs-text-muted) !important;
+}
+
+/* ─── Buttons ─────────────────────────────────────────────── */
+.btn-warning {
+  background-color: var(--cs-yellow);
+  border-color: var(--cs-yellow);
+  color: #000;
+  font-weight: 600;
+}
+
+.btn-warning:hover {
+  background-color: #e67e22;
+  border-color: #e67e22;
+  color: #000;
+}
+
+.btn-outline-warning {
+  color: var(--cs-yellow);
+  border-color: var(--cs-yellow);
+}
+
+.btn-outline-warning:hover {
+  background-color: var(--cs-yellow);
+  color: #000;
+}
+
+/* ─── Alerts ──────────────────────────────────────────────── */
+.alert-success { background: rgba(46,204,113,.1); border-color: rgba(46,204,113,.4); color: #2ecc71; }
+.alert-warning { background: rgba(243,156,18,.1); border-color: rgba(243,156,18,.4); color: var(--cs-yellow); }
+.alert-danger  { background: rgba(231,76,60,.1);  border-color: rgba(231,76,60,.4);  color: #e74c3c; }
+.alert-info    { background: rgba(52,152,219,.1); border-color: rgba(52,152,219,.4); color: #3498db; }
+.alert-secondary { background: rgba(100,116,139,.1); border-color: rgba(100,116,139,.3); color: #94a3b8; }
+
+/* ─── Scrollbar ───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--cs-dark); }
+::-webkit-scrollbar-thumb { background: var(--cs-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* ─── Flag icons ──────────────────────────────────────────── */
+.fi { border-radius: 2px; }
+
+/* ─── Dropdown autocomplete ───────────────────────────────── */
+#searchSuggestions .dropdown-item {
+  border-bottom: 1px solid var(--cs-border);
+  font-size: .875rem;
+}
+
+#searchSuggestions .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+#searchSuggestions .dropdown-item:hover {
+  background: rgba(243,156,18,.12) !important;
+}
+
+/* ─── Charts ──────────────────────────────────────────────── */
+canvas {
+  max-height: 300px;
+}
+
+/* ─── Podium rows ─────────────────────────────────────────── */
+tbody tr:nth-child(1) td { background: rgba(243,156,18,.04) !important; }
+tbody tr:nth-child(2) td { background: rgba(180,180,180,.03) !important; }
+tbody tr:nth-child(3) td { background: rgba(200,120,60,.03) !important; }
+
+/* ─── Code ────────────────────────────────────────────────── */
+code {
+  color: var(--cs-yellow);
+  background: rgba(243,156,18,.1);
+  padding: .1em .4em;
+  border-radius: 4px;
+  font-size: .875em;
+}
+
+/* ─── Footer links ────────────────────────────────────────── */
+footer a:hover { color: var(--cs-yellow) !important; }
+
+/* ─── Rider photo placeholder ─────────────────────────────── */
+.rider-avatar {
+  width: 110px;
+  height: 130px;
+  object-fit: cover;
+  border-radius: .5rem;
+}
+
+/* ─── Responsive tweaks ───────────────────────────────────── */
+@media (max-width: 768px) {
+  .hero-banner { padding: 2rem 0; }
+  .display-4 { font-size: 2rem; }
+  .display-6 { font-size: 1.5rem; }
+  .table-responsive { font-size: .8rem; }
+}
+
+/* ─── Debug toolbar override ──────────────────────────────── */
+#djdt-toolbar { z-index: 9999; }
+
+/* ─── Page transitions ────────────────────────────────────── */
+main { animation: fadeIn .2s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

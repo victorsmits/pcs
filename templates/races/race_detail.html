@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'races:race_list' %}?year={{ year }}" class="text-secondary">Courses {{ year }}</a></li>
+                <li class="breadcrumb-item active text-white">{{ race.name }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Race Header -->
+    <div class="card bg-dark border-secondary mb-4 overflow-hidden">
+        <div class="card-body p-4">
+            <div class="row align-items-start g-3">
+                <div class="col-md-8">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        {% if race.is_grand_tour %}<span class="badge bg-danger px-3 py-2">Grand Tour</span>{% endif %}
+                        {% if race.is_monument %}<span class="badge bg-warning text-dark px-3 py-2">Monument</span>{% endif %}
+                        <span class="badge bg-secondary">{{ race.classification }}</span>
+                        {% if race.circuit %}<span class="badge bg-dark border border-secondary text-secondary">{{ race.circuit }}</span>{% endif %}
+                    </div>
+                    <h1 class="h2 text-white fw-bold mb-1">
+                        {% if race.flag_code != 'xx' %}
+                        <span class="fi fi-{{ race.flag_code }} me-2" style="font-size:.7em;"></span>
+                        {% endif %}
+                        {{ race.name }} {% if race.edition %}<small class="text-secondary fs-5">({{ race.edition }}e éd.)</small>{% endif %}
+                    </h1>
+                    <div class="d-flex flex-wrap gap-3 text-secondary small mt-2">
+                        {% if race.start_date %}
+                        <span><i class="bi bi-calendar3 me-1"></i>
+                            {{ race.start_date|date:"d M Y" }}
+                            {% if race.end_date and race.end_date != race.start_date %} – {{ race.end_date|date:"d M Y" }}{% endif %}
+                        </span>
+                        {% endif %}
+                        {% if race.country_name %}<span><i class="bi bi-geo-alt me-1"></i>{{ race.country_name }}</span>{% endif %}
+                        {% if race.distance %}<span><i class="bi bi-signpost-split me-1"></i>{{ race.distance|floatformat:0 }} km</span>{% endif %}
+                        {% if race.stages_count > 1 %}<span><i class="bi bi-list-ol me-1"></i>{{ race.stages_count }} étapes</span>{% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        <a href="{% url 'races:race_fetch' slug=race.slug year=year %}" class="btn btn-sm btn-outline-warning">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+                        </a>
+                        {% if race.pcs_url %}
+                        <a href="{{ race.pcs_url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>PCS
+                        </a>
+                        {% endif %}
+                        {% if stages %}
+                        <a href="{% url 'races:stage_list' slug=race.slug year=year %}" class="btn btn-sm btn-outline-info">
+                            <i class="bi bi-list-ol me-1"></i>Étapes
+                        </a>
+                        {% endif %}
+                    </div>
+                    <!-- Edition selector -->
+                    {% if editions %}
+                    <div class="mt-2">
+                        <select class="form-select form-select-sm bg-dark border-secondary text-white" onchange="window.location=this.value" style="max-width:150px;display:inline-block;">
+                            <option value="{{ race.get_absolute_url }}" selected>{{ year }}</option>
+                            {% for ed in editions %}
+                            <option value="{{ ed.get_absolute_url }}">{{ ed.year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if race.winner %}
+            <div class="mt-3 pt-3 border-top border-secondary">
+                <span class="text-secondary small me-2">🥇 Vainqueur :</span>
+                <a href="{{ race.winner.get_absolute_url }}" class="text-warning text-decoration-none fw-bold">
+                    {% if race.winner.flag_code != 'xx' %}
+                    <span class="fi fi-{{ race.winner.flag_code }} me-1"></span>
+                    {% endif %}
+                    {{ race.winner.name }}
+                </a>
+                {% if race.winner_team %}
+                <span class="text-secondary small ms-2">({{ race.winner_team.name }})</span>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Main: GC Results + Stages -->
+        <div class="col-lg-8">
+
+            <!-- Stages list (if stage race) -->
+            {% if stages %}
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-warning"><i class="bi bi-list-ol me-2"></i>Étapes</h5>
+                    <a href="{% url 'races:stage_list' slug=race.slug year=year %}" class="btn btn-sm btn-outline-info">Tout voir</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-sm align-middle mb-0">
+                        <thead class="text-secondary">
+                            <tr>
+                                <th>#</th><th>Date</th><th>Départ → Arrivée</th><th>Km</th><th>Type</th><th>Vainqueur</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stage in stages %}
+                            <tr>
+                                <td>
+                                    <a href="{{ stage.get_absolute_url }}" class="text-warning fw-bold text-decoration-none">{{ stage.number }}</a>
+                                </td>
+                                <td class="text-secondary small">{{ stage.date|date:"d/m"|default:"—" }}</td>
+                                <td>
+                                    <a href="{{ stage.get_absolute_url }}" class="text-white text-decoration-none small">
+                                        {{ stage.departure|default:"—" }} → {{ stage.arrival|default:"—" }}
+                                    </a>
+                                </td>
+                                <td class="text-secondary small">{{ stage.distance|floatformat:0|default:"—" }}</td>
+                                <td>
+                                    <span class="badge
+                                        {% if 'mountain' in stage.stage_type %}bg-danger
+                                        {% elif 'tt' in stage.stage_type %}bg-info text-dark
+                                        {% elif stage.stage_type == 'cobbles' %}bg-dark border border-secondary
+                                        {% else %}bg-success{% endif %} small">
+                                        {{ stage.get_stage_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if stage.winner %}
+                                    <a href="{{ stage.winner.get_absolute_url }}" class="text-warning text-decoration-none small">
+                                        {% if stage.winner.flag_code != 'xx' %}
+                                        <span class="fi fi-{{ stage.winner.flag_code }}" style="font-size:.75em;"></span>
+                                        {% endif %}
+                                        {{ stage.winner.name }}
+                                    </a>
+                                    {% else %}<span class="text-secondary small">—</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- GC Results -->
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary">
+                    <h5 class="mb-0 text-warning">
+                        <i class="bi bi-trophy me-2"></i>Classement Général
+                    </h5>
+                </div>
+                {% if gc_results %}
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover table-sm align-middle mb-0">
+                        <thead class="text-secondary">
+                            <tr><th class="text-center">#</th><th>Coureur</th><th>Nat.</th><th>Équipe</th><th class="text-end">Écart</th><th class="text-end">Points</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for result in gc_results %}
+                            <tr>
+                                <td class="text-center fw-bold
+                                    {% if result.rank == 1 %}text-warning
+                                    {% elif result.rank == 2 %}text-secondary
+                                    {% elif result.rank == 3 %}text-warning opacity-75
+                                    {% else %}text-secondary{% endif %}">
+                                    {% if result.rank == 1 %}🥇
+                                    {% elif result.rank == 2 %}🥈
+                                    {% elif result.rank == 3 %}🥉
+                                    {% else %}{{ result.rank }}{% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ result.rider.get_absolute_url }}" class="text-white text-decoration-none fw-semibold small">
+                                        {{ result.rider.name }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if result.rider.flag_code != 'xx' %}
+                                    <span class="fi fi-{{ result.rider.flag_code }}" title="{{ result.rider.nationality }}"></span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-secondary small">{{ result.team.name|default:"—" }}</td>
+                                <td class="text-end text-secondary small">{{ result.time_gap|default:"—" }}</td>
+                                <td class="text-end text-secondary small">{{ result.points|floatformat:0|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body text-center py-4">
+                    <p class="text-secondary mb-2">Aucun résultat disponible.</p>
+                    <a href="{% url 'races:race_fetch' slug=race.slug year=year %}" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-download me-1"></i>Charger depuis PCS
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Previous winners -->
+            {% if winners_history %}
+            <div class="card bg-dark border-secondary mb-4">
+                <div class="card-header border-secondary">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-clock-history me-2"></i>Palmarès récent</h6>
+                </div>
+                <div class="list-group list-group-flush">
+                    {% for w in winners_history %}
+                    <a href="{{ w.get_absolute_url }}" class="list-group-item list-group-item-action bg-dark border-secondary d-flex justify-content-between align-items-center py-2">
+                        <div>
+                            <span class="badge bg-secondary me-2">{{ w.year }}</span>
+                            {% if w.winner %}
+                            <span class="text-white small">
+                                {% if w.winner.flag_code != 'xx' %}<span class="fi fi-{{ w.winner.flag_code }}" style="font-size:.75em;"></span> {% endif %}
+                                {{ w.winner.name }}
+                            </span>
+                            {% else %}
+                            <span class="text-secondary small">—</span>
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Start list -->
+            {% if start_list %}
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-list-check me-2"></i>Liste de départ</h6>
+                </div>
+                <div class="list-group list-group-flush" style="max-height:350px;overflow-y:auto;">
+                    {% for entry in start_list %}
+                    <div class="list-group-item bg-dark border-secondary d-flex align-items-center gap-2 py-2 {% if entry.withdrew %}opacity-50{% endif %}">
+                        {% if entry.bib_number %}<span class="text-secondary" style="min-width:2rem;font-size:.75rem;">#{{ entry.bib_number }}</span>{% endif %}
+                        {% if entry.rider.flag_code != 'xx' %}
+                        <span class="fi fi-{{ entry.rider.flag_code }}" style="font-size:.8em;"></span>
+                        {% endif %}
+                        <a href="{{ entry.rider.get_absolute_url }}" class="text-white text-decoration-none small flex-grow-1 {% if entry.withdrew %}text-decoration-line-through{% endif %}">
+                            {{ entry.rider.name }}
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
