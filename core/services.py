@@ -1,43 +1,59 @@
 import logging
-import requests
+import time
+import cloudscraper
 from bs4 import BeautifulSoup
 from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
 PCS_BASE_URL = "https://www.procyclingstats.com"
-HEADERS = {
-    'User-Agent': (
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-        'AppleWebKit/537.36 (KHTML, like Gecko) '
-        'Chrome/120.0.0.0 Safari/537.36'
-    ),
-    'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-}
+
+_scraper = None
 
 
-def pcs_get(url, cache_timeout=3600):
-    """Fetch a PCS page with caching and error handling."""
+def _get_scraper():
+    """Return a cloudscraper instance (bypasses Cloudflare JS challenges)."""
+    global _scraper
+    if _scraper is not None:
+        return _scraper
+    _scraper = cloudscraper.create_scraper(
+        browser={'browser': 'chrome', 'platform': 'windows', 'mobile': False}
+    )
+    _scraper.headers.update({
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Referer': PCS_BASE_URL + '/',
+    })
+    return _scraper
+
+
+def pcs_get(url, cache_timeout=3600, referer=None):
+    """Fetch a PCS page with Cloudflare bypass, caching and polite delay."""
     cache_key = f"pcs_html_{url}"
     cached = cache.get(cache_key)
     if cached:
         return cached
+
+    scraper = _get_scraper()
+    if referer:
+        scraper.headers['Referer'] = referer
+
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        time.sleep(1.2)
+        response = scraper.get(url, timeout=20)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'lxml')
         cache.set(cache_key, soup, cache_timeout)
         return soup
     except Exception as exc:
-        logger.warning("Failed to fetch %s: %s", url, exc)
+        msg = str(exc)
+        if '500' not in msg and '404' not in msg:
+            logger.warning("Failed to fetch %s: %s", url, exc)
         return None
 
 
-def get_pcs_scraper():
-    """Return pcs_scraper module or None if not available."""
-    try:
-        import pcs_scraper as pcs
-        return pcs
-    except ImportError:
-        logger.warning("pcs_scraper not available")
-        return None
+def pcs_reset_session():
+    """Force a new scraper instance (call after repeated failures)."""
+    global _scraper
+    _scraper = None
+
+

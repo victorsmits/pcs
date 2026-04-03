@@ -1,25 +1,14 @@
 import logging
-import pandas as pd
 from django.utils.text import slugify
 from django.core.cache import cache
-from core.services import pcs_get, get_pcs_scraper, PCS_BASE_URL
+from core.services import pcs_get, PCS_BASE_URL
 
 logger = logging.getLogger(__name__)
 
 
 def fetch_rider_from_pcs(rider_slug):
-    """Fetch rider data from PCS and save/update in database."""
+    """Fetch rider profile page and save/update in database."""
     from riders.models import Rider
-    pcs = get_pcs_scraper()
-    data = {}
-    if pcs:
-        try:
-            rider_obj = pcs.Rider(name=rider_slug)
-            race_history = rider_obj.get_race_history()
-            if race_history is not None and not race_history.empty:
-                data['race_history'] = race_history
-        except Exception as exc:
-            logger.warning("pcs_scraper failed for rider %s: %s", rider_slug, exc)
 
     soup = pcs_get(f"{PCS_BASE_URL}/rider/{rider_slug}")
     if not soup:
@@ -29,13 +18,10 @@ def fetch_rider_from_pcs(rider_slug):
     if not rider_data:
         return None
 
-    rider, created = Rider.objects.update_or_create(
+    rider, _ = Rider.objects.update_or_create(
         slug=rider_slug,
         defaults=rider_data
     )
-    if 'race_history' in data:
-        _save_race_history(rider, data['race_history'])
-
     return rider
 
 
@@ -86,34 +72,6 @@ def _parse_rider_page(soup, rider_slug):
 
     return data
 
-
-def _save_race_history(rider, df):
-    """Save race history DataFrame to RaceResult objects."""
-    from races.models import Race
-    from riders.models import RaceResult
-    if df is None or df.empty:
-        return
-    for _, row in df.iterrows():
-        try:
-            race_name = str(row.get('race', '')).strip()
-            year = int(row.get('year', 0)) if row.get('year') else None
-            rank = row.get('result')
-            if not race_name or not year:
-                continue
-            race_slug = slugify(race_name)
-            race, _ = Race.objects.get_or_create(
-                slug=race_slug, year=year,
-                defaults={'name': race_name, 'year': year}
-            )
-            rank_val = None
-            if rank and str(rank).isdigit():
-                rank_val = int(rank)
-            RaceResult.objects.update_or_create(
-                rider=rider, race=race, year=year, stage=None, result_type='gc',
-                defaults={'rank': rank_val, 'points': float(row.get('points', 0) or 0)}
-            )
-        except Exception as exc:
-            logger.debug("Skipping race history row: %s", exc)
 
 
 def search_riders_on_pcs(query):

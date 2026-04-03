@@ -1,0 +1,23 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pcs_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pcs_db
+      POSTGRES_USER: pcs_user
+      POSTGRES_PASSWORD: pcs_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pcs_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pcs_user -d pcs_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pcs_pgdata:

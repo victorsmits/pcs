@@ -1,71 +1,77 @@
 import logging
+import re as _re
 from django.utils.text import slugify
 from django.core.cache import cache
-from core.services import pcs_get, get_pcs_scraper, PCS_BASE_URL
+from core.services import pcs_get, PCS_BASE_URL
 
 logger = logging.getLogger(__name__)
 
 
+_ORDINAL_PREFIX = _re.compile(r'^\d+(st|nd|rd|th)\s*', _re.IGNORECASE)
+_CLASS_SUFFIX   = _re.compile(r'\s*\([^)]*\)\s*$')
+_EDITION_SUFFIX = _re.compile(r'\s*\[?\d+(st|nd|rd|th)\]?\s*$', _re.IGNORECASE)
+
+
+def _clean_race_name(raw):
+    """Remove ordinal prefixes (72nd) and classification suffixes (2.Pro) from PCS race names."""
+    name = raw.strip()
+    name = _ORDINAL_PREFIX.sub('', name)
+    name = _CLASS_SUFFIX.sub('', name)
+    name = _EDITION_SUFFIX.sub('', name)
+    return name.strip(' -|')
+
+
+# Circuits: 1=WorldTour, 26=ProSeries, 2=WorldChampionships, ''=all
+_RACE_CIRCUITS = [
+    ('1',  'UCI World Tour'),
+    ('26', 'UCI ProSeries'),
+    ('2',  'UCI World Championships'),
+]
+
+
 def fetch_races_by_year(year):
-    """Fetch all races for a given year using pcs_scraper."""
+    """Fetch all races for a given year using cloudscraper HTML parsing."""
     from races.models import Race
-    pcs = get_pcs_scraper()
-    if pcs:
-        try:
-            race_options = pcs.race_options_by_year(year)
-            if race_options is not None and not race_options.empty:
-                for _, row in race_options.iterrows():
-                    name = str(row.get('race', '')).strip()
-                    if not name:
-                        continue
-                    race_slug = slugify(name)
-                    classification = str(row.get('classification', '')).strip()
-                    circuit = str(row.get('circuit', '')).strip()
-                    Race.objects.update_or_create(
-                        slug=race_slug, year=year,
-                        defaults={
-                            'name': name,
-                            'classification': classification[:10] if classification else '',
-                            'circuit': circuit[:50] if circuit else '',
-                        }
-                    )
-                return Race.objects.filter(year=year)
-        except Exception as exc:
-            logger.warning("pcs_scraper race_options_by_year failed for %s: %s", year, exc)
-
-    soup = pcs_get(f"{PCS_BASE_URL}/races.php?year={year}&circuit=1&class=2.UWT")
-    if soup:
-        _parse_and_save_races_list(soup, year)
-
+    saved = 0
+    for circuit_id, circuit_name in _RACE_CIRCUITS:
+        url = (
+            f"{PCS_BASE_URL}/races.php?year={year}"
+            f"&circuit={circuit_id}&class=&filter=Filter"
+        )
+        soup = pcs_get(url, referer=f"{PCS_BASE_URL}/races.php")
+        if soup:
+            saved += _parse_and_save_races_list(soup, year, circuit_name)
+        else:
+            logger.warning("Could not fetch races circuit=%s year=%s", circuit_id, year)
+    logger.info("fetch_races_by_year: %s races saved for %s", saved, year)
     return Race.objects.filter(year=year).order_by('start_date')
 
 
 def fetch_race_detail(race_slug, year):
-    """Fetch detailed race data and save to database."""
+    """Fetch race page and parse results. Tries /gc first (stage races), then /result (1-day)."""
     from races.models import Race
-    pcs = get_pcs_scraper()
-    gc_results = None
-    if pcs:
-        try:
-            race_obj = pcs.Race(name=race_slug, year=year)
-            gc_results = race_obj.get_results()
-        except Exception as exc:
-            logger.warning("pcs_scraper Race failed for %s %s: %s", race_slug, year, exc)
 
-    soup = pcs_get(f"{PCS_BASE_URL}/race/{race_slug}/{year}/gc")
-    if not soup:
-        soup = pcs_get(f"{PCS_BASE_URL}/race/{race_slug}/{year}")
+    soup = None
+    for suffix in ('gc', 'result', ''):
+        url = f"{PCS_BASE_URL}/race/{race_slug}/{year}/{suffix}".rstrip('/')
+        soup = pcs_get(url, referer=f"{PCS_BASE_URL}/races.php")
+        if soup:
+            break
 
     race_data = _parse_race_page(soup, race_slug, year) if soup else {}
 
-    race, created = Race.objects.update_or_create(
+    if not race_data.get('name'):
+        race_data['name'] = race_slug.replace('-', ' ').title()
+    existing = Race.objects.filter(slug=race_slug, year=year).values_list('name', flat=True).first()
+    if existing and not race_data.get('name'):
+        race_data.pop('name', None)
+
+    race, _ = Race.objects.update_or_create(
         slug=race_slug, year=year,
-        defaults=race_data if race_data else {'name': race_slug.replace('-', ' ').title(), 'year': year}
+        defaults=race_data
     )
 
-    if gc_results is not None and not gc_results.empty:
-        _save_gc_results(race, gc_results)
-    elif soup:
+    if soup:
         _parse_and_save_results(race, soup)
 
     return race
@@ -77,7 +83,10 @@ def _parse_race_page(soup, race_slug, year):
     try:
         h1 = soup.find('h1')
         if h1:
-            data['name'] = h1.get_text(strip=True).split(str(year))[0].strip()
+            raw = h1.get_text(strip=True)
+            raw = raw.replace(str(year), '')
+            name_candidate = _clean_race_name(raw)
+            data['name'] = name_candidate if name_candidate else race_slug.replace('-', ' ').title()
         else:
             data['name'] = race_slug.replace('-', ' ').title()
 
@@ -102,81 +111,177 @@ def _parse_race_page(soup, race_slug, year):
     return data
 
 
-def _parse_and_save_races_list(soup, year):
-    """Parse race list page and save to database."""
+def _parse_and_save_races_list(soup, year, circuit_name=''):
+    """Parse race list page (races.php) and save to database. Returns count."""
     from races.models import Race
+    import re
+    from datetime import datetime
+    saved = 0
     try:
-        for row in soup.select('table tbody tr'):
+        table = soup.find('table', class_='basic')
+        if not table:
+            return 0
+        for row in table.select('tbody tr'):
             cols = row.find_all('td')
             if len(cols) < 3:
                 continue
-            name_link = cols[1].find('a') if len(cols) > 1 else None
+            # PCS columns: date | ? | name+link | country | classification
+            name_link = None
+            for col in cols:
+                a = col.find('a', href=lambda h: h and 'race/' in h)
+                if a:
+                    name_link = a
+                    break
             if not name_link:
                 continue
-            name = name_link.get_text(strip=True)
-            href = name_link.get('href', '')
-            slug = href.split('/race/')[-1].split('/')[0] if '/race/' in href else slugify(name)
-            Race.objects.update_or_create(
+            name = _clean_race_name(name_link.get_text(strip=True))
+            href = name_link.get('href', '').lstrip('/')
+            # href format: race/slug/year or race/slug/year/gc
+            parts = href.split('/')
+            # parts[0]='race', parts[1]=slug, parts[2]=year
+            slug = parts[1] if len(parts) > 1 else slugify(name)
+            # country from flag span inside the name column
+            country = ''
+            name_col = next((c for c in cols if c.find('a', href=lambda h: h and 'race/' in h)), None)
+            if name_col:
+                flag = name_col.find('span', class_='flag')
+                if flag:
+                    cls = flag.get('class', [])
+                    country = cls[1].upper() if len(cls) > 1 else ''
+            # classification is usually in last col
+            classification = cols[-1].get_text(strip=True)[:10] if cols else ''
+            # col0 = date range 'DD.MM - DD.MM', col1 = start date 'DD.MM'
+            date_range = cols[0].get_text(strip=True) if cols else ''
+            start_date = end_date = None
+            try:
+                # parse start from col1 (just DD.MM)
+                start_raw = cols[1].get_text(strip=True) if len(cols) > 1 else ''
+                if start_raw and '.' in start_raw:
+                    day, mon = start_raw.split('.')[:2]
+                    start_date = datetime(year, int(mon), int(day)).date()
+            except Exception:
+                pass
+            try:
+                # parse end from col0 range, after ' - '
+                if ' - ' in date_range:
+                    end_raw = date_range.split(' - ')[-1].strip()
+                elif date_range and '.' in date_range:
+                    end_raw = date_range.split(' ')[0].strip()
+                else:
+                    end_raw = ''
+                if end_raw and '.' in end_raw:
+                    parts_e = end_raw.split('.')
+                    end_date = datetime(year, int(parts_e[1]), int(parts_e[0])).date()
+            except Exception:
+                pass
+            if not end_date:
+                end_date = start_date
+            # determine flags
+            is_gt = name in ('Tour de France', 'Giro d\'Italia', 'Vuelta a Espana',
+                             'Tour de France Femmes avec Zwift')
+            is_monument = name in ('Milano-Sanremo', 'Ronde van Vlaanderen',
+                                   'Paris-Roubaix', 'Liège-Bastogne-Liège',
+                                   'Il Lombardia')
+            _, created = Race.objects.update_or_create(
                 slug=slug, year=year,
-                defaults={'name': name, 'year': year}
+                defaults={
+                    'name': name,
+                    'classification': classification,
+                    'circuit': circuit_name[:50],
+                    'country': country,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'is_grand_tour': is_gt,
+                    'is_monument': is_monument,
+                    'is_stage_race': classification.startswith('2.'),
+                }
             )
+            saved += 1
     except Exception as exc:
         logger.error("Error parsing races list: %s", exc)
+    return saved
 
 
 def _parse_and_save_results(race, soup):
-    """Parse GC results from race page."""
+    """Parse GC/result table — works for both stage race /gc and 1-day /result pages.
+
+    Locates columns by CSS class name instead of index because the two page
+    types have different column layouts:
+      /gc (stage):   col0=rank col1=prev col2=time_gap col3=bib ... col7=ridername col8=team
+      /result (1day):col0=rank col1=bib  col2=h2h      col3=specialty ... col5=ridername col6=team
+    href format: rider/slug  team/slug-YEAR  (no leading slash)
+    """
     from riders.models import Rider, RaceResult
+    from teams.models import Team
     try:
         table = soup.find('table', class_='results')
         if not table:
             return
         for row in table.select('tbody tr'):
             cols = row.find_all('td')
-            if len(cols) < 3:
+            if len(cols) < 5:
                 continue
             rank_text = cols[0].get_text(strip=True)
-            rider_link = row.find('a', href=lambda h: h and '/rider/' in h)
+            rank = int(rank_text) if rank_text.isdigit() else None
+
+            # find rider column by class 'ridername'
+            rider_col = row.find('td', class_='ridername')
+            if not rider_col:
+                rider_col = row.find('a', href=lambda h: h and 'rider/' in h)
+                rider_col = rider_col.parent if rider_col else None
+            if not rider_col:
+                continue
+
+            rider_link = rider_col.find('a', href=lambda h: h and 'rider/' in h)
             if not rider_link:
                 continue
+            rider_href = rider_link.get('href', '').lstrip('/')
+            rider_slug = rider_href[6:] if rider_href.startswith('rider/') else rider_href
             rider_name = rider_link.get_text(strip=True)
-            rider_slug = rider_link['href'].split('/rider/')[-1].strip('/')
-            rank = int(rank_text) if rank_text.isdigit() else None
-            rider, _ = Rider.objects.get_or_create(
+
+            # nationality from flag span inside ridername cell
+            rider_nat = ''
+            flag_span = rider_col.find('span', class_='flag')
+            if flag_span:
+                cls = flag_span.get('class', [])
+                rider_nat = cls[1].upper() if len(cls) > 1 else ''
+
+            # time_gap: look for td with class 'fs11 clr666' (stage race only)
+            time_gap = ''
+            for td in cols:
+                cl = ' '.join(td.get('class', []))
+                if 'fs11' in cl and 'clr666' in cl:
+                    val = td.get_text(strip=True)
+                    if '+' in val or val == '-':
+                        time_gap = val
+                        break
+
+            # team: find td immediately after ridername col
+            team_obj = None
+            team_link = row.find('a', href=lambda h: h and 'team/' in h)
+            if team_link:
+                th = team_link.get('href', '').lstrip('/')
+                if th.startswith('team/'):
+                    raw = th[5:]                     # e.g. uae-team-emirates-2024
+                    ts = raw[:-5].rstrip('-')          # strip -YEAR suffix
+                    team_obj = (Team.objects.filter(slug=ts, year=race.year).first() or
+                                Team.objects.filter(slug=ts).order_by('-year').first())
+
+            rider, created = Rider.objects.get_or_create(
                 slug=rider_slug,
-                defaults={'name': rider_name}
+                defaults={'name': rider_name, 'nationality': rider_nat}
             )
+            if not created and rider_nat and not rider.nationality:
+                rider.nationality = rider_nat
+                rider.save(update_fields=['nationality'])
+
             RaceResult.objects.update_or_create(
                 rider=rider, race=race, year=race.year, stage=None, result_type='gc',
-                defaults={'rank': rank}
-            )
+                defaults={'rank': rank, 'team': team_obj, 'time_gap': time_gap[:20]})
+
     except Exception as exc:
         logger.error("Error parsing results for %s: %s", race, exc)
 
-
-def _save_gc_results(race, df):
-    """Save GC results DataFrame to database."""
-    from riders.models import Rider, RaceResult
-    if df is None or df.empty:
-        return
-    for _, row in df.iterrows():
-        try:
-            rider_name = str(row.get('rider', '')).strip()
-            if not rider_name:
-                continue
-            rider_slug = slugify(rider_name)
-            rank_val = row.get('result') or row.get('rank')
-            rank = int(rank_val) if str(rank_val).isdigit() else None
-            rider, _ = Rider.objects.get_or_create(
-                slug=rider_slug,
-                defaults={'name': rider_name}
-            )
-            RaceResult.objects.update_or_create(
-                rider=rider, race=race, year=race.year, stage=None, result_type='gc',
-                defaults={'rank': rank, 'points': float(row.get('points', 0) or 0)}
-            )
-        except Exception as exc:
-            logger.debug("Skipping GC result row: %s", exc)
 
 
 def fetch_stages_for_race(race):

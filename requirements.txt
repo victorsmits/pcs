@@ -1,5 +1,6 @@
 Django>=4.2,<5.0
-pcs-scraper==0.2.0
+psycopg2-binary>=2.9
+cloudscraper>=1.2.71
 djangorestframework>=3.14
 django-crispy-forms>=2.1
 crispy-bootstrap5>=0.7
