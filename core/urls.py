@@ -9,4 +9,6 @@ urlpatterns = [
     path('search/autocomplete/', views.search_autocomplete, name='search_autocomplete'),
     path('about/', views.about, name='about'),
     path('stats/', views.stats_overview, name='stats'),
+    path('sync/', views.sync_page, name='sync'),
+    path('sync/<str:job_id>/status/', views.sync_status_api, name='sync_status'),
 ]

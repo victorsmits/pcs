@@ -1,0 +1,15 @@
+{% extends "admin/index.html" %}
+{% load i18n %}
+
+{% block content %}
+<div style="margin-bottom:20px;">
+    <a href="{% url 'admin:admin_sync' %}"
+       style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;
+              background:#d97706;color:#fff;text-decoration:none;border-radius:6px;
+              font-weight:bold;font-size:14px;">
+        &#x21BB; Synchronisation PCS
+    </a>
+    <span style="color:#999;font-size:12px;margin-left:12px;">Importer courses, équipes, résultats depuis procyclingstats.com</span>
+</div>
+{{ block.super }}
+{% endblock %}

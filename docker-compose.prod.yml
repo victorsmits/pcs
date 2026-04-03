@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pcs_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pcs_prod
+      POSTGRES_USER: pcs_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pcs_pgdata:/var/lib/postgresql/data
+    networks:
+      - pcs_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pcs_user -d pcs_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    image: ${DOCKER_HUB_USERNAME}/cyclostats:latest
+    container_name: pcs_web
+    restart: unless-stopped
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://pcs_user:${POSTGRES_PASSWORD}@db:5432/pcs_prod
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pcs_network
+    volumes:
+      - static_volume:/app/staticfiles
+    command: >
+      sh -c "python manage.py migrate &&
+             gunicorn --bind 0.0.0.0:8000 pcs.wsgi:application"
+
+  nginx:
+    image: nginx:alpine
+    container_name: pcs_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - static_volume:/static:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - web
+    networks:
+      - pcs_network
+
+networks:
+  pcs_network:
+    driver: bridge
+
+volumes:
+  pcs_pgdata:
+  static_volume:

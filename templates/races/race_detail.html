@@ -94,6 +94,37 @@
         </div>
     </div>
 
+    <!-- Profile + Map -->
+    {% if race.profile_url or race.departure_city or race.arrival_city or race.country_name %}
+    <div class="row g-4 mb-4">
+        {% if race.profile_url %}
+        <div class="col-lg-{% if race.departure_city or race.arrival_city or race.country_name %}7{% else %}12{% endif %}">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary py-2">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-bar-chart-line me-2"></i>Profil altimétrique</h6>
+                </div>
+                <div class="card-body p-2 d-flex align-items-center justify-content-center">
+                    <img src="{{ race.profile_url }}" alt="Profil {{ race.name }}"
+                         class="img-fluid rounded" style="max-height:220px;width:100%;object-fit:contain;background:#111;">
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% if race.departure_city or race.arrival_city or race.country_name %}
+        <div class="col-lg-{% if race.profile_url %}5{% else %}12{% endif %}">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary py-2">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-map me-2"></i>Tracé</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div id="race-map" style="height:220px;border-radius:0 0 .375rem .375rem;"></div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <!-- Main: GC Results + Stages -->
         <div class="col-lg-8">
@@ -259,4 +290,73 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if race.departure_city or race.arrival_city or race.country_name %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+    var mapEl = document.getElementById('race-map');
+    if (!mapEl) return;
+
+    var map = L.map('race-map', { zoomControl: true, attributionControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 14 }).addTo(map);
+
+    var departure = "{{ race.departure_city|escapejs }}";
+    var arrival   = "{{ race.arrival_city|escapejs }}";
+    var country   = "{{ race.country_name|escapejs }}";
+    var raceName  = "{{ race.name|escapejs }}";
+
+    function markerIcon(color) {
+        return L.divIcon({
+            html: '<div style="background:'+color+';width:13px;height:13px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 4px #000;"></div>',
+            className: '', iconSize: [13,13], iconAnchor: [6,6]
+        });
+    }
+
+    function geocode(query, cb) {
+        fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query))
+            .then(function(r){ return r.json(); })
+            .then(function(d){ cb(d && d[0] ? [parseFloat(d[0].lat), parseFloat(d[0].lon)] : null); })
+            .catch(function(){ cb(null); });
+    }
+
+    function draw(pts) {
+        if (!pts.length) return;
+        if (pts.length >= 2) {
+            L.marker(pts[0], {icon: markerIcon('#4ade80')}).addTo(map)
+                .bindTooltip('<b>Départ</b>' + (departure ? ': ' + departure : ''), {permanent:false});
+            var last = pts[pts.length-1];
+            if (last[0] !== pts[0][0] || last[1] !== pts[0][1]) {
+                L.marker(last, {icon: markerIcon('#f87171')}).addTo(map)
+                    .bindTooltip('<b>Arrivée</b>' + (arrival ? ': ' + arrival : ''), {permanent:false});
+            }
+            L.polyline(pts, {color:'#f59e0b', weight:3, opacity:0.85}).addTo(map);
+            map.fitBounds(L.latLngBounds(pts), {padding:[25,25]});
+        } else {
+            map.setView(pts[0], 9);
+        }
+    }
+
+    if (departure && arrival && departure !== arrival) {
+        geocode(departure + (country ? ', ' + country : ''), function(depPt) {
+            geocode(arrival + (country ? ', ' + country : ''), function(arrPt) {
+                if (depPt && arrPt) draw([depPt, arrPt]);
+                else if (depPt) draw([depPt]);
+                else if (arrPt) draw([arrPt]);
+                else geocode(country || raceName, function(p){ if(p) map.setView(p, 7); });
+            });
+        });
+    } else if (departure) {
+        geocode(departure + (country ? ', ' + country : ''), function(pt) {
+            pt ? draw([pt]) : geocode(country || raceName, function(p){ if(p) map.setView(p, 7); });
+        });
+    } else {
+        geocode(country || raceName, function(pt){ if(pt) map.setView(pt, 7); });
+    }
+})();
+</script>
+{% endif %}
 {% endblock %}

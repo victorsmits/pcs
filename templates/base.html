@@ -107,9 +107,12 @@
                 </div>
             </form>
 
-            <!-- Admin link -->
+            <!-- Staff links -->
             {% if user.is_staff %}
-            <a class="btn btn-outline-secondary btn-sm" href="/admin/" target="_blank">
+            <a class="btn btn-outline-warning btn-sm" href="{% url 'core:sync' %}" title="Synchronisation PCS">
+                <i class="bi bi-arrow-repeat"></i>
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="/admin/" target="_blank" title="Administration">
                 <i class="bi bi-gear"></i>
             </a>
             {% endif %}

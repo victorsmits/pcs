@@ -78,6 +78,7 @@ class Race(models.Model):
     )
     pcs_url = models.URLField(blank=True, verbose_name='URL PCS')
     photo_url = models.URLField(blank=True, verbose_name='Photo URL')
+    profile_url = models.URLField(blank=True, verbose_name='URL profil altimétrique')
     description = models.TextField(blank=True, verbose_name='Description')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

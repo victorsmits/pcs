@@ -13,8 +13,9 @@ _EDITION_SUFFIX = _re.compile(r'\s*\[?\d+(st|nd|rd|th)\]?\s*$', _re.IGNORECASE)
 
 
 def _clean_race_name(raw):
-    """Remove ordinal prefixes (72nd) and classification suffixes (2.Pro) from PCS race names."""
-    name = raw.strip()
+    """Remove year prefix (2025 » ...), ordinal prefix (72nd), classification suffix (2.Pro)."""
+    name = raw.replace('\xa0', ' ').replace('\u00bb', '').replace('»', '').strip()
+    name = _re.sub(r'^\d{4}\s*', '', name).strip()
     name = _ORDINAL_PREFIX.sub('', name)
     name = _CLASS_SUFFIX.sub('', name)
     name = _EDITION_SUFFIX.sub('', name)
@@ -93,19 +94,35 @@ def _parse_race_page(soup, race_slug, year):
         data['year'] = year
         data['pcs_url'] = f"{PCS_BASE_URL}/race/{race_slug}/{year}"
 
-        info_div = soup.find('div', class_='infolist')
-        if info_div:
-            for li in info_div.find_all('li'):
-                spans = li.find_all('span')
-                if len(spans) >= 2:
-                    key = spans[0].get_text(strip=True).lower()
-                    val = spans[1].get_text(strip=True)
-                    if 'date' in key:
+        for li in soup.find_all('li'):
+            t = li.find('div', class_='title')
+            v = li.find('div', class_='value')
+            if not t or not v:
+                continue
+            key = t.get_text(strip=True).lower().rstrip(':').strip()
+            val = v.get_text(strip=True)
+            if not val:
+                continue
+            if key == 'classification':
+                data['classification'] = val[:10]
+            elif key == 'distance':
+                m = _re.search(r'[\d.,]+', val)
+                if m:
+                    try:
+                        data['distance'] = float(m.group().replace(',', '.'))
+                    except ValueError:
                         pass
-                    elif 'country' in key or 'nation' in key:
-                        data['country_name'] = val
-                    elif 'classification' in key or 'cat' in key:
-                        data['classification'] = val[:10]
+            elif key in ('country', 'nation', 'country of origin'):
+                data['country_name'] = val
+            elif key == 'departure':
+                data['departure_city'] = val[:100]
+            elif key == 'arrival':
+                data['arrival_city'] = val[:100]
+
+        profile_img = soup.find('img', src=lambda s: s and 'profile' in s.lower())
+        if profile_img:
+            src = profile_img['src']
+            data['profile_url'] = src if src.startswith('http') else f"{PCS_BASE_URL}/{src.lstrip('/')}"
     except Exception as exc:
         logger.error("Error parsing race page %s %s: %s", race_slug, year, exc)
     return data

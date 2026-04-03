@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block breadcrumb %}
+<div class="bg-dark border-bottom border-secondary py-2">
+    <div class="container">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0 small">
+                <li class="breadcrumb-item"><a href="{% url 'core:home' %}" class="text-secondary">Accueil</a></li>
+                <li class="breadcrumb-item active text-white">Synchronisation PCS</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:860px;">
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <i class="bi bi-arrow-repeat text-warning fs-2"></i>
+        <div>
+            <h1 class="h3 text-white mb-0">Synchronisation PCS</h1>
+            <p class="text-secondary small mb-0">Importe ou met à jour les données depuis procyclingstats.com</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Form -->
+        <div class="col-lg-5">
+            <div class="card bg-dark border-secondary">
+                <div class="card-header border-secondary">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-sliders me-2"></i>Paramètres</h6>
+                </div>
+                <div class="card-body">
+                    <form id="sync-form">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label class="form-label text-secondary small fw-semibold">Type de synchronisation</label>
+                            {% for value, label in sync_types %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="sync_type"
+                                       id="type_{{ value }}" value="{{ value }}"
+                                       {% if value == 'races' %}checked{% endif %}>
+                                <label class="form-check-label text-white small" for="type_{{ value }}">
+                                    {{ label }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <hr class="border-secondary">
+
+                        <div class="mb-4">
+                            <label class="form-label text-secondary small fw-semibold">Années</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for y in years_available %}
+                                {% if y >= 2023 %}
+                                <div class="form-check form-check-inline m-0">
+                                    <input class="form-check-input" type="checkbox" name="years"
+                                           id="year_{{ y }}" value="{{ y }}"
+                                           {% if y|stringformat:"s" in default_years %}checked{% endif %}>
+                                    <label class="form-check-label text-white small" for="year_{{ y }}">{{ y }}</label>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2">
+                                <select class="form-select form-select-sm bg-dark border-secondary text-white" id="extra-year-select" style="max-width:130px;">
+                                    <option value="">+ Autre année</option>
+                                    {% for y in years_available %}{% if y < 2023 %}
+                                    <option value="{{ y }}">{{ y }}</option>
+                                    {% endif %}{% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="sync-btn" class="btn btn-warning w-100 fw-bold">
+                            <i class="bi bi-play-fill me-1"></i>Lancer la synchronisation
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log output -->
+        <div class="col-lg-7">
+            <div class="card bg-dark border-secondary h-100">
+                <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-warning"><i class="bi bi-terminal me-2"></i>Journal</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="status-badge" class="badge bg-secondary">En attente</span>
+                        <button class="btn btn-sm btn-outline-secondary py-0" onclick="clearLog()">
+                            <i class="bi bi-trash3"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <pre id="log-output"
+                         style="min-height:380px;max-height:520px;overflow-y:auto;margin:0;padding:1rem;
+                                background:#0d0d0d;color:#ccc;font-size:.78rem;border-radius:0 0 .375rem .375rem;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    var jobId = null;
+    var pollInterval = null;
+    var logOffset = 0;
+
+    // Allow selecting extra years from dropdown
+    document.getElementById('extra-year-select').addEventListener('change', function() {
+        var y = this.value;
+        if (!y) return;
+        if (document.getElementById('year_' + y)) { this.value = ''; return; }
+        var wrap = document.createElement('div');
+        wrap.className = 'form-check form-check-inline m-0';
+        wrap.innerHTML = '<input class="form-check-input" type="checkbox" name="years" id="year_' + y + '" value="' + y + '" checked>' +
+                         '<label class="form-check-label text-white small" for="year_' + y + '">' + y + '</label>';
+        this.parentElement.parentElement.querySelector('.d-flex.flex-wrap').appendChild(wrap);
+        this.value = '';
+    });
+
+    document.getElementById('sync-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+
+        // Validate at least one year checked
+        var years = formData.getAll('years');
+        if (!years.length) {
+            appendLog('✗ Sélectionnez au moins une année.', 'error');
+            return;
+        }
+
+        clearLog();
+        setStatus('running');
+        document.getElementById('sync-btn').disabled = true;
+        logOffset = 0;
+
+        fetch('{% url "core:sync" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {'X-CSRFToken': formData.get('csrfmiddlewaretoken')}
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            jobId = data.job_id;
+            pollInterval = setInterval(pollStatus, 1500);
+        })
+        .catch(function(err) {
+            appendLog('✗ Erreur réseau: ' + err, 'error');
+            setStatus('error');
+            document.getElementById('sync-btn').disabled = false;
+        });
+    });
+
+    function pollStatus() {
+        if (!jobId) return;
+        fetch('{% url "core:sync_status" job_id="JOBID" %}'.replace('JOBID', jobId) + '?offset=' + logOffset)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            data.lines.forEach(function(line) { appendLog(line.msg, line.level); });
+            logOffset = data.total;
+            if (data.done) {
+                clearInterval(pollInterval);
+                setStatus('done');
+                document.getElementById('sync-btn').disabled = false;
+            }
+        })
+        .catch(function() {});
+    }
+
+    function appendLog(msg, level) {
+        var pre = document.getElementById('log-output');
+        var color = level === 'success' ? '#4ade80' : level === 'error' ? '#f87171' : '#ccc';
+        pre.innerHTML += '<span style="color:' + color + '">' + escHtml(msg) + '</span>\n';
+        pre.scrollTop = pre.scrollHeight;
+    }
+
+    function clearLog() {
+        document.getElementById('log-output').innerHTML = '';
+        logOffset = 0;
+    }
+
+    function setStatus(state) {
+        var badge = document.getElementById('status-badge');
+        var map = {
+            'running': ['En cours...', 'bg-warning text-dark'],
+            'done':    ['Terminé ✓',  'bg-success'],
+            'error':   ['Erreur',     'bg-danger'],
+        };
+        var info = map[state] || ['En attente', 'bg-secondary'];
+        badge.textContent = info[0];
+        badge.className = 'badge ' + info[1];
+    }
+
+    function escHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+})();
+</script>
+{% endblock %}

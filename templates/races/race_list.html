@@ -23,9 +23,16 @@
             </h1>
             <p class="text-secondary small mb-0">{{ total_count|intcomma }} course{{ total_count|pluralize }} trouvée{{ total_count|pluralize }}</p>
         </div>
-        <a href="{% url 'races:race_calendar' %}?year={{ year }}" class="btn btn-outline-info btn-sm">
-            <i class="bi bi-calendar3 me-1"></i>Calendrier
-        </a>
+        <div class="d-flex gap-2">
+            {% if request.user.is_staff %}
+            <a href="{% url 'core:sync' %}?year={{ year }}" class="btn btn-outline-warning btn-sm">
+                <i class="bi bi-arrow-repeat me-1"></i>Sync {{ year }}
+            </a>
+            {% endif %}
+            <a href="{% url 'races:race_calendar' %}?year={{ year }}" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-calendar3 me-1"></i>Calendrier
+            </a>
+        </div>
     </div>
 
     <!-- Filters -->

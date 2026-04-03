@@ -70,6 +70,78 @@ Endpoints principaux :
 - `GET /api/teams/` — Liste des équipes
 - `GET /api/results/` — Tous les résultats
 
+## Déploiement avec Docker (Production)
+
+### Prérequis
+- Docker et Docker Compose installés
+- Nginx configuration (voir ci-dessous)
+
+### 1. Configuration de l'environnement
+
+Créer un fichier `.env` à la racine du projet :
+```bash
+# Clé secrète Django (générer une nouvelle clé)
+SECRET_KEY=votre-cle-secrete-ici
+
+# Mot de passe PostgreSQL
+POSTGRES_PASSWORD=votre-mot-de-passe-ici
+
+# Domaines autorisés (séparés par des virgules)
+ALLOWED_HOSTS=example.com,www.example.com
+```
+
+### 2. Configuration Nginx
+
+Créer le dossier `nginx/` et ajouter les fichiers de configuration :
+
+**nginx/default.conf** :
+```nginx
+upstream django {
+    server web:8000;
+}
+
+server {
+    listen 80;
+    server_name example.com www.example.com;
+
+    location /static/ {
+        alias /static/;
+        expires 30d;
+    }
+
+    location / {
+        proxy_pass http://django;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
+    }
+}
+```
+
+### 3. Déploiement
+
+```bash
+# Construire et lancer les conteneurs
+docker-compose up -d --build
+
+# Exécuter les migrations
+docker-compose exec web python manage.py migrate
+
+# Créer un superutilisateur
+docker-compose exec web python manage.py createsuperuser
+
+# Synchroniser les données (optionnel)
+docker-compose exec web python manage.py sync_data --year 2024 --type all
+```
+
+### 4. SSL/TLS (Optionnel)
+
+Pour HTTPS avec Let's Encrypt :
+1. Ajouter la configuration SSL dans `nginx/default.conf`
+2. Placer les certificats dans le dossier `ssl/`
+3. Redémarrer nginx : `docker-compose restart nginx`
+
 ## Structure du projet
 
 ```
