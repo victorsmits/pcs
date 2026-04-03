@@ -31,7 +31,7 @@ class Command(BaseCommand):
         slugs = options.get('slugs', [])
         gender = options['gender']
 
-        self.stdout.write(self.style.SUCCESS(f'🚴 Synchronisation des données {sync_type} pour {year}...'))
+        self.stdout.write(self.style.SUCCESS(f'[SYNC] Synchronisation des donnees {sync_type} pour {year}...'))
 
         if sync_type in ('all', 'races'):
             self._sync_races(year)
@@ -45,11 +45,11 @@ class Command(BaseCommand):
         if sync_type == 'riders' and not slugs:
             self.stdout.write(self.style.WARNING('Précisez --slugs pour synchroniser des coureurs spécifiques.'))
 
-        self.stdout.write(self.style.SUCCESS('✅ Synchronisation terminée !'))
+        self.stdout.write(self.style.SUCCESS('[OK] Synchronisation terminee !'))
 
     def _sync_races(self, year):
         from races.services import fetch_races_by_year
-        self.stdout.write(f'  → Courses {year}...')
+        self.stdout.write(f'  -> Courses {year}...')
         try:
             races = fetch_races_by_year(year)
             count = races.count() if hasattr(races, 'count') else len(races)
@@ -59,26 +59,26 @@ class Command(BaseCommand):
 
     def _sync_teams(self, year, gender):
         from teams.services import fetch_teams_by_year
-        self.stdout.write(f'  → Équipes {year} ({gender})...')
+        self.stdout.write(f'  -> Equipes {year} ({gender})...')
         try:
             teams = fetch_teams_by_year(year, gender)
             count = teams.count() if hasattr(teams, 'count') else len(teams)
-            self.stdout.write(self.style.SUCCESS(f'     {count} équipes synchronisées'))
+            self.stdout.write(self.style.SUCCESS(f'     {count} equipes synchronisees'))
         except Exception as exc:
             self.stdout.write(self.style.ERROR(f'     Erreur: {exc}'))
 
     def _sync_riders(self, slugs):
         from riders.services import fetch_rider_from_pcs
-        self.stdout.write(f'  → {len(slugs)} coureur(s)...')
+        self.stdout.write(f'  -> {len(slugs)} coureur(s)...')
         success = 0
         for slug in slugs:
             try:
                 rider = fetch_rider_from_pcs(slug)
                 if rider:
-                    self.stdout.write(f'     ✓ {rider.name}')
+                    self.stdout.write(f'     OK  {rider.name}')
                     success += 1
                 else:
-                    self.stdout.write(self.style.WARNING(f'     ✗ {slug} introuvable'))
+                    self.stdout.write(self.style.WARNING(f'     NOT FOUND  {slug}'))
             except Exception as exc:
-                self.stdout.write(self.style.ERROR(f'     ✗ {slug}: {exc}'))
+                self.stdout.write(self.style.ERROR(f'     ERR  {slug}: {exc}'))
         self.stdout.write(self.style.SUCCESS(f'     {success}/{len(slugs)} coureurs synchronisés'))

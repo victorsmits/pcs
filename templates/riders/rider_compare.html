@@ -87,10 +87,6 @@
             <table class="table table-dark table-sm align-middle mb-0">
                 <tbody>
                     {% with s1=comparison.rider1 s2=comparison.rider2 %}
-                    {% for label, key in "Classement PCS,pcs_rank|Points PCS,pcs_points|Victoires,wins|Podiums,podiums|Top 10,top10|Grands Tours,grand_tours|Monuments,monuments"|split:"|" %}
-                    {% with val=label|slice:"0:" %}
-                    {% endwith %}
-                    {% endfor %}
                     <tr>
                         <td class="text-end fw-bold {% if s1.pcs_rank <= s2.pcs_rank %}text-warning{% else %}text-white{% endif %}">
                             {{ rider1.pcs_rank|default:"—" }}

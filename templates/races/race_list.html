@@ -78,8 +78,6 @@
 
     <!-- Type badges -->
     <div class="d-flex flex-wrap gap-2 mb-3">
-        {% for label, val, color in "Tous,all,secondary|Grands Tours,grand_tour,danger|Monuments,monument,warning|Par étapes,stage,primary|1 jour,oneday,info"|split:"|" %}
-        {% endfor %}
         <a href="?year={{ year }}&type=all{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'all' %}btn-warning{% else %}btn-outline-secondary{% endif %}">Tous</a>
         <a href="?year={{ year }}&type=grand_tour{% if search_q %}&q={{ search_q }}{% endif %}" class="btn btn-sm {% if show_type == 'grand_tour' %}btn-danger{% else %}btn-outline-danger{% endif %}">
             <i class="bi bi-trophy-fill me-1"></i>Grands Tours
