@@ -153,6 +153,12 @@ PCS_CACHE_TIMEOUT = 3600  # 1 hour
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
+# CSRF trusted origins for production
+CSRF_TRUSTED_ORIGINS = [
+    "https://pcs.victorsmits.com",
+    "https://www.pcs.victorsmits.com",
+]
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
