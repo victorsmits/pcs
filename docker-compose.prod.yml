@@ -32,6 +32,7 @@ services:
       - DB_USER=pcs_user
       - DB_PORT=5432
       - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - HOME=/tmp
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +44,7 @@ services:
       - static_volume:/app/staticfiles
     command: >
       sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 pcs_project.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --worker-tmp-dir /tmp pcs_project.wsgi:application"
 
 networks:
   pcs_network:
