@@ -41,7 +41,7 @@ services:
       - static_volume:/app/staticfiles
     command: >
       sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 pcs.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 pcs_project.wsgi:application"
 
 networks:
   pcs_network:
