@@ -37,6 +37,8 @@ services:
         condition: service_healthy
     networks:
       - pcs_network
+    ports:
+      - "8800:8000"
     volumes:
       - static_volume:/app/staticfiles
     command: >
