@@ -24,7 +24,7 @@ services:
     container_name: pcs_web
     restart: unless-stopped
     environment:
-      - DEBUG=False
+      - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
       - DB_HOST=pcs_postgres
       - DB_PASSWORD=${POSTGRES_PASSWORD}
