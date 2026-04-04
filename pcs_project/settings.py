@@ -149,6 +149,10 @@ ITEMS_PER_PAGE = 50
 # PCS Scraper settings
 PCS_CACHE_TIMEOUT = 3600  # 1 hour
 
+# Trust proxy headers (for external reverse proxy)
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
