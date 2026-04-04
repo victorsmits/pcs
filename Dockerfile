@@ -29,11 +29,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies
+# Install runtime dependencies (nodejs needed for cloudscraper Cloudflare bypass)
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libpq5 \
         curl \
+        nodejs \
         && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
