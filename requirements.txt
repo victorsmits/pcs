@@ -16,3 +16,4 @@ django-extensions>=3.2
 django-debug-toolbar>=4.2
 lxml>=4.9
 gunicorn>=21.2
+curl_cffi>=0.7
