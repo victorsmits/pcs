@@ -151,13 +151,13 @@
 {% block extra_js %}
 <script>
 (function () {
-  const form     = document.getElementById('syncForm');
-  const progress = document.getElementById('sync-progress');
-  const bar      = document.getElementById('sync-progress-bar');
-  const pctLabel = document.getElementById('sync-pct-label');
-  const stepLabel= document.getElementById('sync-step-label');
-  const log      = document.getElementById('sync-log');
-  const badge    = document.getElementById('sync-status-badge');
+  const form      = document.getElementById('syncForm');
+  const progress  = document.getElementById('sync-progress');
+  const bar       = document.getElementById('sync-progress-bar');
+  const pctLabel  = document.getElementById('sync-pct-label');
+  const stepLabel = document.getElementById('sync-step-label');
+  const logEl     = document.getElementById('sync-log');
+  const badge     = document.getElementById('sync-status-badge');
 
   if (!form) return;
 
@@ -166,65 +166,67 @@
     const btn = document.getElementById('startSyncBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Démarrage…';
+    logEl.innerHTML = '';
     progress.style.display = 'block';
 
-    const fd = new FormData(form);
-
-    fetch('{% url "cycling:sync" %}', { method: 'POST', body: fd })
+    fetch('{% url "cycling:sync" %}', { method: 'POST', body: new FormData(form) })
       .then(r => r.json())
       .then(data => {
-        if (data.job_id) pollStatus(data.job_id);
-        else logLine('Erreur: pas de job_id reçu.', 'danger');
+        if (data.job_id) pollStatus(data.job_id, 0);
+        else appendLine('Erreur: pas de job_id.', 'danger');
       })
       .catch(err => {
-        logLine('Erreur réseau: ' + err, 'danger');
+        appendLine('Erreur réseau: ' + err, 'danger');
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Réessayer';
       });
   });
 
-  function pollStatus(jobId) {
-    const url = '{% url "cycling:sync_status" "JOB_ID" %}'.replace('JOB_ID', jobId);
-    const timer = setInterval(() => {
-      fetch(url)
-        .then(r => r.json())
-        .then(data => {
-          const pct = data.progress || 0;
+  function pollStatus(jobId, offset) {
+    const base = '{% url "cycling:sync_status" "JOB_ID" %}'.replace('JOB_ID', jobId);
+
+    fetch(base + '?offset=' + offset)
+      .then(r => r.json())
+      .then(data => {
+        // Render new log lines
+        (data.lines || []).forEach(function(line) {
+          const isSuccess = line.startsWith('  →') || line.includes('complete');
+          const isError   = line.includes('[ERROR]') || line.includes('[FATAL]');
+          appendLine(line, isError ? 'danger' : isSuccess ? 'success' : '');
+        });
+
+        const newOffset = data.total || offset;
+
+        // Estimate progress: pulse bar while running
+        if (!data.done) {
+          const pct = Math.min(90, Math.round((newOffset / Math.max(newOffset + 5, 1)) * 90));
           bar.style.width = pct + '%';
           pctLabel.textContent = pct + '%';
-          if (data.step) { stepLabel.textContent = data.step; logLine(data.step); }
-          if (data.status === 'done') {
-            clearInterval(timer);
-            bar.style.width = '100%';
-            pctLabel.textContent = '100%';
-            badge.className = 'badge bg-success';
-            badge.textContent = 'Terminé';
-            logLine('Synchronisation terminée.', 'success');
-            const btn = document.getElementById('startSyncBtn');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Nouvelle synchronisation';
-          } else if (data.status === 'error') {
-            clearInterval(timer);
-            badge.className = 'badge bg-danger';
-            badge.textContent = 'Erreur';
-            logLine('Erreur: ' + (data.error || 'inconnue'), 'danger');
-            const btn = document.getElementById('startSyncBtn');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Réessayer';
-          }
-        })
-        .catch(() => {}); // silently ignore poll errors
-    }, 2000);
+          if (data.lines && data.lines.length) stepLabel.textContent = data.lines[data.lines.length - 1];
+          setTimeout(() => pollStatus(jobId, newOffset), 2000);
+        } else {
+          bar.style.width = '100%';
+          pctLabel.textContent = '100%';
+          badge.className = 'badge bg-success';
+          badge.textContent = 'Terminé';
+          stepLabel.textContent = 'Terminé';
+          appendLine('✔ Synchronisation terminée.', 'success');
+          const btn = document.getElementById('startSyncBtn');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-play-fill me-2"></i>Nouvelle synchronisation';
+        }
+      })
+      .catch(() => setTimeout(() => pollStatus(jobId, offset), 3000));
   }
 
-  function logLine(msg, type) {
+  function appendLine(msg, type) {
     const color = type === 'success' ? '#6ee7b7' : type === 'danger' ? '#fca5a5' : 'var(--cs-text-muted)';
-    log.innerHTML += '\n<span style="color:' + color + ';">' + escHtml(msg) + '</span>';
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function escHtml(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const span = document.createElement('span');
+    span.style.color = color;
+    span.style.display = 'block';
+    span.textContent = msg;
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
   }
 })();
 </script>

@@ -496,8 +496,8 @@ def _run_sync(job_id, sync_type, years):
 def sync_page(request):
     if request.method == 'POST':
         sync_type = request.POST.get('sync_type', 'races')
-        year_param = request.POST.get('years', str(date.today().year))
-        years = [int(y.strip()) for y in year_param.split(',') if y.strip().isdigit()]
+        years_raw = request.POST.getlist('years')
+        years = [int(y) for y in years_raw if y.isdigit()]
         if not years:
             years = [date.today().year]
 
