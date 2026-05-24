@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Live — {{ today|date:"d M Y" }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="d-flex align-items-center gap-2">
+            <span class="live-dot" style="width:10px;height:10px;"></span>
+            <h1 class="h3 fw-black mb-0" style="letter-spacing:-.03em;">
+                Courses en direct
+            </h1>
+        </div>
+        <span class="text-secondary small">{{ today|date:"l d F Y" }}</span>
+        <button id="globalRefreshBtn" class="btn btn-sm btn-outline-warning ms-auto"
+                onclick="startGlobalRefresh()" type="button">
+            <i class="bi bi-arrow-repeat me-1"></i>Activer le live
+        </button>
+    </div>
+
+    <div id="globalLiveStatus" class="live-bar px-3 mb-3 rounded"
+         style="border:1px solid rgba(239,68,68,.2);display:none!important;">
+        <span class="live-dot"></span>
+        <span class="fw-bold" style="font-size:.8rem;">LIVE</span>
+        <span class="text-secondary mx-1">·</span>
+        <span id="globalUpdateTime" style="font-size:.8rem;">Initialisation…</span>
+        <span class="text-secondary ms-auto small">Auto-refresh toutes les 30 s</span>
+    </div>
+
+    {% if races_data %}
+
+    {% for item in races_data %}
+    {% with race=item.race %}
+    <div class="card mb-4" id="raceCard-{{ race.slug }}" data-slug="{{ race.slug }}" data-year="{{ race.year }}">
+
+        <!-- Race header -->
+        <div class="card-header p-3" style="background:linear-gradient(90deg,rgba(239,68,68,.08),transparent);">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span class="live-dot"></span>
+                        {% if race.is_grand_tour %}
+                        <span class="badge badge-grand-tour">Grand Tour</span>
+                        {% elif race.is_monument %}
+                        <span class="badge badge-monument">Monument</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ race.classification }}</span>
+                        {% endif %}
+                        {% if race.flag_code != 'xx' %}
+                        <span class="fi fi-{{ race.flag_code }}"></span>
+                        {% endif %}
+                    </div>
+                    <h2 class="h5 fw-bold text-white mb-1" style="letter-spacing:-.02em;">
+                        <a href="{{ race.get_absolute_url }}" class="text-white text-decoration-none">
+                            {{ race.name }}
+                        </a>
+                    </h2>
+                    <div class="text-secondary small">
+                        <i class="bi bi-calendar3 me-1"></i>
+                        {{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
+                        {% if race.stages_count > 1 %}
+                        · {{ race.stages_count }} étapes
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-shrink-0">
+                    <a href="{{ race.get_absolute_url }}" class="btn btn-sm btn-outline-warning">
+                        <i class="bi bi-arrow-right me-1"></i>Détail
+                    </a>
+                    <a href="{% url 'races:race_fetch' slug=race.slug year=race.year %}"
+                       class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="row g-0">
+
+                <!-- Current stage info -->
+                {% if item.current_stage %}
+                <div class="col-12 px-3 py-2" style="border-bottom:1px solid var(--cs-border);background:rgba(245,158,11,.04);">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <span class="text-warning fw-bold small">
+                            <i class="bi bi-flag me-1"></i>
+                            Étape {{ item.current_stage.number }}
+                        </span>
+                        {% if item.current_stage.departure and item.current_stage.arrival %}
+                        <span class="text-white small">
+                            {{ item.current_stage.departure }} → {{ item.current_stage.arrival }}
+                        </span>
+                        {% endif %}
+                        {% if item.current_stage.distance %}
+                        <span class="text-secondary small">{{ item.current_stage.distance|floatformat:0 }} km</span>
+                        {% endif %}
+                        <span class="badge
+                            {% if 'mountain' in item.current_stage.stage_type %}stage-mountain
+                            {% elif item.current_stage.stage_type == 'flat' %}stage-flat
+                            {% elif item.current_stage.stage_type == 'hilly' %}stage-hilly
+                            {% elif 'tt' in item.current_stage.stage_type %}stage-tt
+                            {% else %}stage-flat{% endif %}">
+                            {{ item.current_stage.get_stage_type_display }}
+                        </span>
+                        {% if item.current_stage.winner %}
+                        <span class="ms-auto small">
+                            🏆
+                            <a href="{{ item.current_stage.winner.get_absolute_url }}"
+                               class="text-warning text-decoration-none fw-bold">
+                                {{ item.current_stage.winner.name }}
+                            </a>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Stage results -->
+                <div class="col-lg-{% if item.gc %}6{% else %}12{% endif %}"
+                     {% if item.gc %}style="border-right:1px solid var(--cs-border);"{% endif %}>
+
+                    {% if item.stage_results %}
+                    <div class="px-3 pt-3 pb-1">
+                        <p class="text-secondary small fw-bold text-uppercase mb-2"
+                           style="letter-spacing:.07em;font-size:.7rem;">
+                            <i class="bi bi-flag-fill me-1"></i>Résultat étape
+                        </p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover table-sm align-middle mb-0"
+                               id="stageTable-{{ race.slug }}">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width:3rem;">#</th>
+                                    <th>Coureur</th>
+                                    <th></th>
+                                    <th>Équipe</th>
+                                    <th class="text-end">Temps</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in item.stage_results %}
+                                <tr data-rank="{{ r.rank }}">
+                                    <td class="text-center fw-bold text-secondary">
+                                        {% if r.rank == 1 %}🏆{% else %}{{ r.rank }}{% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ r.rider_url }}"
+                                           class="text-white text-decoration-none fw-semibold small">
+                                            {{ r.rider_name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if r.rider_flag != 'xx' %}
+                                        <span class="fi fi-{{ r.rider_flag }}"></span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-secondary small">{{ r.team }}</td>
+                                    <td class="text-end text-secondary small">
+                                        {{ r.time_gap|default:"—" }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-4 text-center text-secondary">
+                        <i class="bi bi-hourglass-split d-block fs-3 mb-2 text-warning opacity-50"></i>
+                        <p class="small mb-1 fw-semibold text-white">Étape en cours</p>
+                        <p class="small mb-3">Les résultats apparaîtront ici une fois l'étape terminée.</p>
+                        <button class="btn btn-sm btn-outline-warning"
+                                onclick="forceRefreshRace('{{ race.slug }}', {{ race.year }})">
+                            <i class="bi bi-arrow-repeat me-1"></i>Vérifier maintenant
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- GC standings -->
+                {% if item.gc %}
+                <div class="col-lg-6">
+                    <div class="px-3 pt-3 pb-1">
+                        <p class="text-secondary small fw-bold text-uppercase mb-2"
+                           style="letter-spacing:.07em;font-size:.7rem;">
+                            <i class="bi bi-trophy me-1 text-warning"></i>Classement général
+                        </p>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover table-sm align-middle mb-0"
+                               id="gcTable-{{ race.slug }}">
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width:3rem;">#</th>
+                                    <th>Coureur</th>
+                                    <th></th>
+                                    <th>Équipe</th>
+                                    <th class="text-end">Écart</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in item.gc %}
+                                <tr data-rank="{{ r.rank }}"
+                                    class="{% if r.rank == 1 %}rank-1{% elif r.rank == 2 %}rank-2{% elif r.rank == 3 %}rank-3{% endif %}">
+                                    <td class="text-center fw-bold">
+                                        {% if r.rank == 1 %}🥇
+                                        {% elif r.rank == 2 %}🥈
+                                        {% elif r.rank == 3 %}🥉
+                                        {% else %}<span class="text-secondary">{{ r.rank }}</span>{% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ r.rider.get_absolute_url }}"
+                                           class="text-white text-decoration-none fw-semibold small">
+                                            {{ r.rider.name }}
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if r.rider.flag_code != 'xx' %}
+                                        <span class="fi fi-{{ r.rider.flag_code }}"></span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-secondary small">{{ r.team.name|default:"—" }}</td>
+                                    <td class="text-end gc-gap small"
+                                        style="font-feature-settings:'tnum';">
+                                        {% if r.rank == 1 %}
+                                        <span class="text-warning fw-bold">Leader</span>
+                                        {% else %}
+                                        <span class="text-secondary">{{ r.time_gap|default:"—" }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-3 py-2 text-end">
+                        <a href="{{ race.get_absolute_url }}" class="text-warning text-decoration-none small">
+                            Classement complet <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>{# /row #}
+        </div>{# /card-body #}
+
+        <!-- Last updated footer -->
+        <div class="card-footer py-2 px-3 d-flex align-items-center gap-2"
+             style="background:transparent;border-top:1px solid var(--cs-border);">
+            <span class="text-secondary small" id="updateTime-{{ race.slug }}">
+                <i class="bi bi-clock me-1"></i>Données issues de la base locale
+            </span>
+            <button class="btn btn-link btn-sm text-warning text-decoration-none ms-auto p-0"
+                    onclick="forceRefreshRace('{{ race.slug }}', {{ race.year }})">
+                <i class="bi bi-arrow-repeat me-1"></i>Rafraîchir
+            </button>
+        </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+
+    {% else %}
+    <!-- No ongoing races found -->
+    <div class="card p-5 text-center">
+        <i class="bi bi-calendar-x d-block fs-1 text-secondary mb-3"></i>
+        <h3 class="h5 text-white fw-bold mb-2">Aucune course trouvée pour aujourd'hui</h3>
+        <p class="text-secondary mb-4" style="max-width:440px;margin:0 auto;">
+            Aucune course n'est enregistrée dans la base de données pour la date d'aujourd'hui ({{ today|date:"d/m/Y" }}).
+            Lancez une synchronisation pour récupérer le calendrier depuis PCS.
+        </p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            {% if user.is_staff %}
+            <a href="{% url 'core:sync' %}" class="btn btn-warning fw-bold">
+                <i class="bi bi-arrow-repeat me-2"></i>Synchroniser les courses
+            </a>
+            {% endif %}
+            <a href="{% url 'races:race_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-trophy me-2"></i>Voir toutes les courses
+            </a>
+            <a href="{% url 'races:race_calendar' %}" class="btn btn-outline-info">
+                <i class="bi bi-calendar3 me-2"></i>Calendrier
+            </a>
+        </div>
+
+        <!-- Manual fetch by slug -->
+        <div class="mt-4 p-3 rounded" style="background:var(--cs-bg-3);max-width:420px;margin:0 auto;">
+            <p class="text-secondary small mb-2 fw-semibold">
+                <i class="bi bi-search me-1"></i>Charger une course manuellement
+            </p>
+            <form method="get" action="{% url 'races:race_list' %}" class="d-flex gap-2">
+                <input class="form-control form-control-sm" type="text"
+                       name="q" placeholder="Nom de la course…">
+                <button class="btn btn-sm btn-warning" type="submit">OK</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  'use strict';
+
+  var globalInterval = null;
+  var isGlobalLive   = false;
+
+  window.startGlobalRefresh = function () {
+    isGlobalLive = !isGlobalLive;
+    var btn    = document.getElementById('globalRefreshBtn');
+    var bar    = document.getElementById('globalLiveStatus');
+
+    if (isGlobalLive) {
+      btn.innerHTML = '<span class="live-dot me-1"></span>Live actif';
+      btn.classList.remove('btn-outline-warning');
+      btn.classList.add('btn-live', 'active');
+      bar.style.setProperty('display', 'flex', 'important');
+      refreshAll();
+      globalInterval = setInterval(refreshAll, 30000);
+    } else {
+      btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Activer le live';
+      btn.classList.add('btn-outline-warning');
+      btn.classList.remove('btn-live', 'active');
+      bar.style.setProperty('display', 'none', 'important');
+      clearInterval(globalInterval);
+    }
+  };
+
+  function refreshAll() {
+    var cards = document.querySelectorAll('[data-slug][data-year]');
+    cards.forEach(function (card) {
+      fetchRaceData(card.dataset.slug, parseInt(card.dataset.year));
+    });
+    var el = document.getElementById('globalUpdateTime');
+    if (el) el.textContent = 'Actualisation…';
+  }
+
+  window.forceRefreshRace = function (slug, year) {
+    fetchRaceData(slug, year);
+  };
+
+  function fetchRaceData(slug, year) {
+    var url = '/races/' + slug + '/' + year + '/live/';
+    fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var now = new Date();
+        var timeStr = now.toLocaleTimeString('fr-FR', {
+          hour: '2-digit', minute: '2-digit', second: '2-digit'
+        });
+
+        // Update global status
+        var gtu = document.getElementById('globalUpdateTime');
+        if (gtu) gtu.textContent = 'Mis à jour à ' + timeStr;
+
+        // Update per-card timestamp
+        var cardTime = document.getElementById('updateTime-' + slug);
+        if (cardTime) {
+          cardTime.innerHTML =
+            '<i class="bi bi-clock me-1"></i>Mis à jour à ' + timeStr;
+        }
+
+        // Update GC table
+        if (data.gc && data.gc.length) {
+          updateGCTable(slug, data.gc);
+        }
+
+        // Update stage results table
+        if (data.stage_results && data.stage_results.length) {
+          updateStageTable(slug, data.stage_results);
+        }
+      })
+      .catch(function (err) {
+        console.warn('Live fetch error for', slug, err);
+      });
+  }
+
+  function updateGCTable(slug, gcData) {
+    var tbody = document.querySelector('#gcTable-' + slug + ' tbody');
+    if (!tbody) return;
+
+    gcData.forEach(function (r) {
+      var row = tbody.querySelector('tr[data-rank="' + r.rank + '"]');
+      if (!row) return;
+      var gapCell = row.querySelector('.gc-gap');
+      if (!gapCell) return;
+      var newGap = r.rank === 1 ? '<span class="text-warning fw-bold">Leader</span>'
+                                 : '<span class="text-secondary">' + (r.time_gap || '—') + '</span>';
+      if (gapCell.innerHTML !== newGap) {
+        gapCell.innerHTML = newGap;
+        flashRow(row);
+      }
+    });
+  }
+
+  function updateStageTable(slug, stageData) {
+    var tbody = document.querySelector('#stageTable-' + slug + ' tbody');
+    if (!tbody) return;
+
+    stageData.forEach(function (r) {
+      var row = tbody.querySelector('tr[data-rank="' + r.rank + '"]');
+      if (!row) return;
+      // Check if anything changed - just flash
+      flashRow(row);
+    });
+  }
+
+  function flashRow(row) {
+    row.classList.remove('row-updated');
+    void row.offsetWidth;
+    row.classList.add('row-updated');
+  }
+
+  // Auto-start live mode if there are ongoing races
+  {% if races_data %}
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(window.startGlobalRefresh, 600);
+  });
+  {% endif %}
+})();
+</script>
+{% endblock %}

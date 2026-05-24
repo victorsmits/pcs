@@ -56,12 +56,20 @@ def _get_session():
     return _session
 
 
-def pcs_get(url, cache_timeout=3600, referer=None):
-    """Fetch a PCS page with Cloudflare bypass, caching and polite delay."""
+def pcs_get(url, cache_timeout=3600, referer=None, force=False):
+    """Fetch a PCS page with Cloudflare bypass, caching and polite delay.
+
+    Args:
+        url: URL to fetch.
+        cache_timeout: Cache TTL in seconds (0 = no cache).
+        referer: Optional Referer header override.
+        force: If True, bypass the cache and always fetch fresh.
+    """
     cache_key = f"pcs_html_{url}"
-    cached = cache.get(cache_key)
-    if cached:
-        return cached
+    if not force:
+        cached = cache.get(cache_key)
+        if cached:
+            return cached
 
     session = _get_session()
 
@@ -74,7 +82,8 @@ def pcs_get(url, cache_timeout=3600, referer=None):
             response = session.get(url, timeout=20)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'lxml')
-            cache.set(cache_key, soup, cache_timeout)
+            if cache_timeout > 0:
+                cache.set(cache_key, soup, cache_timeout)
             return soup
         except Exception as exc:
             msg = str(exc)

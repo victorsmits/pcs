@@ -27,11 +27,8 @@ def home(request):
         start_date__gt=date.today(), year=current_year
     ).order_by('start_date').select_related('winner')[:6]
 
-    ongoing_races = Race.objects.filter(
-        start_date__lte=date.today(),
-        end_date__gte=date.today(),
-        year=current_year
-    ).order_by('start_date')[:3]
+    from races.services import find_races_today
+    ongoing_races = find_races_today()[:3]
 
     top_riders = Rider.objects.filter(
         pcs_rank__isnull=False, is_active=True

@@ -138,6 +138,9 @@ def race_detail(request, slug, year):
 @require_GET
 def race_live_api(request, slug, year):
     """JSON endpoint for live race data polling from the frontend."""
+    from django.core.cache import cache as django_cache
+    from races.services import fetch_live_race_data
+
     race = get_object_or_404(Race, slug=slug, year=year)
 
     today = date.today()
@@ -146,28 +149,37 @@ def race_live_api(request, slug, year):
         and race.start_date <= today <= race.end_date
     )
 
-    # Throttled PCS refresh: at most once every 2 minutes per race
-    from django.core.cache import cache
-    cache_key = f'live_fetched_{slug}_{year}'
-    if is_live and not cache.get(cache_key):
-        try:
-            refreshed = fetch_race_detail(slug, year)
-            if refreshed:
-                race = refreshed
-            cache.set(cache_key, True, 120)
-        except Exception as exc:
-            logger.warning("Live fetch failed for %s %s: %s", slug, year, exc)
+    # Throttle: one live PCS fetch per 90 seconds per race (matches pcs_get cache_timeout)
+    throttle_key = f'live_throttle_{slug}_{year}'
+    should_fetch = is_live and not django_cache.get(throttle_key)
 
-    gc_results = (
+    if should_fetch:
+        django_cache.set(throttle_key, True, 90)
+        try:
+            live_data = fetch_live_race_data(race)
+        except Exception as exc:
+            logger.warning("Live data fetch failed for %s %s: %s", slug, year, exc)
+            live_data = None
+    else:
+        live_data = None
+
+    # Fall back to DB if live fetch wasn't triggered or failed
+    gc_qs = (
         RaceResult.objects.filter(race=race, result_type='gc', stage__isnull=True)
         .select_related('rider', 'team')
         .order_by('rank')[:20]
     )
 
+    stage_results = live_data['stage_results'] if live_data else []
+    current_stage = live_data['current_stage'] if live_data else (
+        Stage.objects.filter(race=race, date=today).first()
+        or Stage.objects.filter(race=race, date__lte=today).order_by('-date').first()
+    )
+
     stages = (
         Stage.objects.filter(race=race)
         .order_by('number')
-        .select_related('winner', 'winner__current_team')
+        .select_related('winner')
     )
 
     data = {
@@ -176,6 +188,13 @@ def race_live_api(request, slug, year):
             'name': race.name,
             'updated_at': race.updated_at.isoformat() if race.updated_at else None,
         },
+        'current_stage': {
+            'number': current_stage.number,
+            'departure': current_stage.departure,
+            'arrival': current_stage.arrival,
+            'type': current_stage.get_stage_type_display(),
+            'distance': current_stage.distance,
+        } if current_stage else None,
         'gc': [
             {
                 'rank': r.rank,
@@ -188,8 +207,9 @@ def race_live_api(request, slug, year):
                 'dnf': r.dnf,
                 'dns': r.dns,
             }
-            for r in gc_results
+            for r in gc_qs
         ],
+        'stage_results': stage_results[:20],
         'stages': [
             {
                 'number': s.number,
@@ -209,6 +229,47 @@ def race_live_api(request, slug, year):
     }
 
     return JsonResponse(data)
+
+
+def live_dashboard(request):
+    """Dedicated live dashboard showing all races happening today."""
+    from races.services import find_races_today, fetch_live_race_data
+    from riders.models import RaceResult
+
+    ongoing = list(find_races_today())
+
+    races_data = []
+    for race in ongoing:
+        # Get GC top 10 from DB (live fetch happens via the API endpoint)
+        gc = (
+            RaceResult.objects.filter(race=race, result_type='gc', stage__isnull=True)
+            .select_related('rider', 'team')
+            .order_by('rank')[:10]
+        )
+        today = date.today()
+        current_stage = (
+            Stage.objects.filter(race=race, date=today).first()
+            or Stage.objects.filter(race=race, date__lte=today).order_by('-date').first()
+        )
+        stage_results = (
+            RaceResult.objects.filter(race=race, stage=current_stage, result_type='stage')
+            .select_related('rider', 'team')
+            .order_by('rank')[:10]
+        ) if current_stage else []
+
+        races_data.append({
+            'race': race,
+            'gc': gc,
+            'current_stage': current_stage,
+            'stage_results': stage_results,
+        })
+
+    context = {
+        'races_data': races_data,
+        'today': date.today(),
+        'page_title': f'Live — {date.today().strftime("%d %B %Y")}',
+    }
+    return render(request, 'races/race_live_dashboard.html', context)
 
 
 def stage_list(request, slug, year):

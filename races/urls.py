@@ -5,6 +5,7 @@ app_name = 'races'
 
 urlpatterns = [
     path('', views.race_list, name='race_list'),
+    path('live/', views.live_dashboard, name='live_dashboard'),
     path('calendar/', views.race_calendar, name='race_calendar'),
     path('<slug:slug>/<int:year>/', views.race_detail, name='race_detail'),
     path('<slug:slug>/<int:year>/stages/', views.stage_list, name='stage_list'),
