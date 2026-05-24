@@ -1,54 +1,49 @@
 /* ============================================================
-   CycloStats — Custom CSS v2.0
+   CycloStats — Custom CSS v2.0  (cycling app)
    ============================================================ */
 
 /* ─── Design Tokens ───────────────────────────────────────── */
 :root {
-  /* Brand */
-  --cs-accent:       #f59e0b;
-  --cs-accent-hover: #d97706;
-  --cs-accent-glow:  rgba(245, 158, 11, 0.25);
-  --cs-accent-dim:   rgba(245, 158, 11, 0.12);
+  --cs-accent:        #f59e0b;
+  --cs-accent-hover:  #d97706;
+  --cs-accent-glow:   rgba(245, 158, 11, 0.25);
+  --cs-accent-dim:    rgba(245, 158, 11, 0.12);
 
-  /* Status */
-  --cs-live:         #ef4444;
-  --cs-live-glow:    rgba(239, 68, 68, 0.3);
-  --cs-success:      #10b981;
-  --cs-info:         #3b82f6;
+  --cs-live:          #ef4444;
+  --cs-live-glow:     rgba(239, 68, 68, 0.3);
+  --cs-success:       #10b981;
+  --cs-info:          #3b82f6;
 
-  /* Backgrounds */
-  --cs-bg-0:    #06090f;
-  --cs-bg-1:    #0b1120;
-  --cs-bg-2:    #101929;
-  --cs-bg-3:    #162034;
-  --cs-bg-glass: rgba(11, 17, 32, 0.88);
+  --cs-bg-0:          #06090f;
+  --cs-bg-1:          #0b1120;
+  --cs-bg-2:          #101929;
+  --cs-bg-3:          #162034;
+  --cs-bg-glass:      rgba(11, 17, 32, 0.88);
 
-  /* Borders */
   --cs-border:        rgba(30, 54, 90, 0.75);
   --cs-border-light:  rgba(42, 72, 110, 0.6);
   --cs-border-accent: rgba(245, 158, 11, 0.38);
 
-  /* Text */
-  --cs-text:      #e2e8f0;
-  --cs-text-muted: #94a3b8;
-  --cs-text-dim:   #64748b;
+  --cs-text:          #e2e8f0;
+  --cs-text-muted:    #94a3b8;
+  --cs-text-dim:      #64748b;
 
-  /* Geometry */
   --radius-xs: 5px;
   --radius-sm: 8px;
   --radius:    12px;
   --radius-lg: 16px;
   --radius-xl: 22px;
 
-  /* Motion */
   --t: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ─── Base ────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+html { scroll-behavior: smooth; }
+
 body {
-  background-color: var(--cs-bg-1);
+  background-color: var(--cs-bg-0);
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   color: var(--cs-text);
   -webkit-font-smoothing: antialiased;
@@ -60,6 +55,49 @@ body {
 ::-webkit-scrollbar-track { background: var(--cs-bg-0); }
 ::-webkit-scrollbar-thumb { background: rgba(94, 133, 172, 0.28); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(94, 133, 172, 0.48); }
+
+/* ─── HTMX Indicator ──────────────────────────────────────── */
+.htmx-indicator {
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}
+
+/* Top-of-page loading bar */
+#htmx-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  height: 3px;
+  opacity: 0;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+#htmx-indicator .htmx-indicator-bar {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, var(--cs-accent), #fbbf24, var(--cs-accent));
+  background-size: 200% 100%;
+  animation: htmxBarSlide 1.2s linear infinite;
+  transform-origin: left;
+}
+
+@keyframes htmxBarSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.htmx-request #htmx-indicator {
+  opacity: 1;
+}
 
 /* ─── Navbar ──────────────────────────────────────────────── */
 .navbar {
@@ -89,8 +127,7 @@ body {
   background: rgba(255, 255, 255, 0.06);
 }
 
-.navbar-nav .nav-link.active,
-.navbar-nav .nav-link.text-warning {
+.navbar-nav .nav-link.active {
   color: var(--cs-accent) !important;
   background: var(--cs-accent-dim);
 }
@@ -118,7 +155,7 @@ body {
   text-decoration: none;
 }
 
-/* Search input */
+/* Search */
 #navSearch {
   background: var(--cs-bg-3) !important;
   border-color: var(--cs-border) !important;
@@ -130,17 +167,6 @@ body {
 #navSearch:focus {
   border-color: var(--cs-border-accent) !important;
   box-shadow: 0 0 0 3px var(--cs-accent-dim) !important;
-}
-
-/* Kbd shortcut hint */
-.search-kbd {
-  font-size: 0.65rem;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid var(--cs-border);
-  border-radius: 4px;
-  padding: 1px 5px;
-  color: var(--cs-text-dim);
-  white-space: nowrap;
 }
 
 /* ─── Autocomplete ────────────────────────────────────────── */
@@ -162,8 +188,8 @@ body {
 }
 
 #searchSuggestions .dropdown-item:last-child { border-bottom: none; }
-#searchSuggestions .dropdown-item:hover,
-#searchSuggestions .dropdown-item.keyboard-focus {
+
+#searchSuggestions .dropdown-item:hover {
   background: var(--cs-accent-dim) !important;
 }
 
@@ -180,16 +206,14 @@ body {
   border-bottom-color: var(--cs-border) !important;
   border-radius: var(--radius) var(--radius) 0 0 !important;
   font-weight: 600;
+  font-size: .875rem;
+  padding: .75rem 1.25rem;
 }
 
 .card-hover:hover {
   border-color: var(--cs-border-accent) !important;
   transform: translateY(-3px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--cs-border-accent);
-}
-
-.card-hover:hover .text-white {
-  color: #fff !important;
 }
 
 /* ─── Hero Banner ─────────────────────────────────────────── */
@@ -206,9 +230,7 @@ body {
 .hero-banner::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: 1px;
   background: linear-gradient(90deg, transparent 0%, var(--cs-accent-dim) 40%, var(--cs-accent-dim) 60%, transparent 100%);
   pointer-events: none;
@@ -268,16 +290,26 @@ body {
 
 .table-dark tbody tr:last-child td { border-bottom: none; }
 
+/* Sticky thead */
+.table-sticky-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--cs-bg-2) !important;
+}
+
 /* Podium rows */
 .rank-1 > td { background: rgba(245, 158, 11, 0.07) !important; }
 .rank-2 > td { background: rgba(148, 163, 184, 0.04) !important; }
 .rank-3 > td { background: rgba(200, 120, 60, 0.04) !important; }
 
-/* Live data flash animation */
+/* HTMX row flash after swap */
 @keyframes rowFlash {
-  0%   { background: rgba(245, 158, 11, 0.18) !important; }
+  0%   { background: rgba(245, 158, 11, 0.22) !important; }
   100% { background: transparent !important; }
 }
+
+.row-flash { animation: rowFlash 1.4s ease-out forwards; }
 .row-updated { animation: rowFlash 1.2s ease-out forwards; }
 
 /* ─── Tabs ────────────────────────────────────────────────── */
@@ -286,8 +318,11 @@ body {
   gap: 2px;
   flex-wrap: nowrap;
   overflow-x: auto;
+  scrollbar-width: none;
   padding-bottom: 0;
 }
+
+.nav-tabs::-webkit-scrollbar { display: none; }
 
 .nav-tabs .nav-link {
   font-size: 0.86rem;
@@ -313,17 +348,22 @@ body {
   border-bottom-color: var(--cs-bg-2);
 }
 
-.tab-content { border: 1px solid var(--cs-border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); }
+.tab-content {
+  border: 1px solid var(--cs-border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
 .tab-pane { padding: 0; }
 
-/* ─── Live Mode ───────────────────────────────────────────── */
+/* ─── Live Animations ─────────────────────────────────────── */
 @keyframes liveDot {
-  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(239,68,68,0.6); }
+  0%, 100% { opacity: 1; transform: scale(1);    box-shadow: 0 0 0 0   rgba(239,68,68,0.6); }
   50%       { opacity: 0.7; transform: scale(0.85); box-shadow: 0 0 0 5px rgba(239,68,68,0); }
 }
 
 @keyframes liveRipple {
-  0%   { transform: scale(1); opacity: 0.6; }
+  0%   { transform: scale(1);   opacity: 0.6; }
   100% { transform: scale(2.8); opacity: 0; }
 }
 
@@ -361,12 +401,16 @@ body {
   align-items: center;
   gap: 6px;
   padding: 0.38rem 0.85rem;
+  text-decoration: none;
 }
 
-.btn-live:hover { background: rgba(239, 68, 68, 0.18); border-color: rgba(239, 68, 68, 0.5); color: var(--cs-live); }
-.btn-live.active { background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.6); box-shadow: 0 0 18px var(--cs-live-glow); }
+.btn-live:hover {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: var(--cs-live);
+}
 
-/* Live status bar below race header */
+/* Live status bar */
 .live-bar {
   background: linear-gradient(90deg, rgba(239,68,68,0.1), rgba(239,68,68,0.05));
   border-bottom: 1px solid rgba(239, 68, 68, 0.2);
@@ -380,20 +424,7 @@ body {
 
 .live-bar.visible { display: flex; }
 
-/* ─── Stage type badges ───────────────────────────────────── */
-.stage-flat     { background: rgba(16,185,129,.14); color: #6ee7b7; border: 1px solid rgba(16,185,129,.28); }
-.stage-hilly    { background: rgba(234,179,8,.14);  color: #fde68a; border: 1px solid rgba(234,179,8,.28); }
-.stage-mountain { background: rgba(239,68,68,.14);  color: #fca5a5; border: 1px solid rgba(239,68,68,.28); }
-.stage-tt       { background: rgba(59,130,246,.14); color: #93c5fd; border: 1px solid rgba(59,130,246,.28); }
-.stage-cobbles  { background: rgba(107,114,128,.14);color: #d1d5db; border: 1px solid rgba(107,114,128,.28); }
-.stage-prologue { background: rgba(139,92,246,.14); color: #c4b5fd; border: 1px solid rgba(139,92,246,.28); }
-
-/* ─── Race classification badges ──────────────────────────── */
-.badge-grand-tour { background: linear-gradient(135deg, #dc2626, #991b1b); }
-.badge-monument   { background: linear-gradient(135deg, #d97706, #92400e); }
-.badge-uwt        { background: linear-gradient(135deg, #2563eb, #1e3a8a); }
-
-/* ─── Ongoing race card ───────────────────────────────────── */
+/* Live race card */
 .race-live-card {
   border-color: rgba(239, 68, 68, 0.3) !important;
   background: linear-gradient(135deg, var(--cs-bg-2), rgba(239, 68, 68, 0.04));
@@ -404,16 +435,29 @@ body {
 .race-live-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 0; left: 0;
   width: 3px;
   height: 100%;
   background: var(--cs-live);
   opacity: 0.7;
 }
 
+/* ─── Stage type badges ───────────────────────────────────── */
+.stage-flat     { background: rgba(16,185,129,.14);  color: #6ee7b7; border: 1px solid rgba(16,185,129,.28); border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+.stage-hilly    { background: rgba(234,179,8,.14);   color: #fde68a; border: 1px solid rgba(234,179,8,.28);  border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+.stage-mountain { background: rgba(239,68,68,.14);   color: #fca5a5; border: 1px solid rgba(239,68,68,.28);  border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+.stage-tt       { background: rgba(59,130,246,.14);  color: #93c5fd; border: 1px solid rgba(59,130,246,.28); border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+.stage-cobbles  { background: rgba(107,114,128,.14); color: #d1d5db; border: 1px solid rgba(107,114,128,.28);border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+.stage-prologue { background: rgba(139,92,246,.14);  color: #c4b5fd; border: 1px solid rgba(139,92,246,.28); border-radius: var(--radius-xs); padding: .15em .5em; font-size: .68rem; font-weight: 600; }
+
+/* ─── Classification badges ───────────────────────────────── */
+.badge-grand-tour { background: linear-gradient(135deg, #dc2626, #991b1b); }
+.badge-monument   { background: linear-gradient(135deg, #d97706, #92400e); }
+.badge-uwt        { background: linear-gradient(135deg, #2563eb, #1e3a8a); }
+
 /* ─── Form Controls ───────────────────────────────────────── */
-.form-control, .form-select {
+.form-control,
+.form-select {
   background-color: var(--cs-bg-2) !important;
   border-color: var(--cs-border) !important;
   color: var(--cs-text) !important;
@@ -421,13 +465,20 @@ body {
   font-size: 0.875rem;
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   border-color: var(--cs-border-accent) !important;
   box-shadow: 0 0 0 3px var(--cs-accent-dim) !important;
   background-color: var(--cs-bg-2) !important;
 }
 
 .form-control::placeholder { color: var(--cs-text-dim) !important; }
+
+.input-group-text {
+  background: var(--cs-bg-3) !important;
+  border-color: var(--cs-border) !important;
+  color: var(--cs-text-muted);
+}
 
 /* ─── Buttons ─────────────────────────────────────────────── */
 .btn-warning {
@@ -455,27 +506,6 @@ body {
   color: var(--cs-accent);
 }
 
-/* ─── Alerts ──────────────────────────────────────────────── */
-.alert-success  { background: rgba(16,185,129,.08); border-color: rgba(16,185,129,.3); color: #6ee7b7; }
-.alert-warning  { background: rgba(245,158,11,.08);  border-color: rgba(245,158,11,.3); color: #fde68a; }
-.alert-danger   { background: rgba(239,68,68,.08);   border-color: rgba(239,68,68,.3);  color: #fca5a5; }
-.alert-info     { background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.3); color: #93c5fd; }
-.alert-secondary{ background: rgba(100,116,139,.08); border-color: rgba(100,116,139,.25); color: var(--cs-text-muted); }
-
-/* ─── List Groups ─────────────────────────────────────────── */
-.list-group-item {
-  background: transparent !important;
-  border-color: var(--cs-border) !important;
-  color: var(--cs-text);
-  font-size: 0.875rem;
-  transition: background var(--t);
-}
-
-.list-group-item-action:hover {
-  background: rgba(245, 158, 11, 0.05) !important;
-  color: var(--cs-text) !important;
-}
-
 /* ─── Badges ──────────────────────────────────────────────── */
 .badge {
   font-weight: 600;
@@ -484,8 +514,12 @@ body {
   border-radius: var(--radius-xs);
 }
 
-/* ─── Breadcrumb ──────────────────────────────────────────── */
-.breadcrumb-item + .breadcrumb-item::before { color: var(--cs-text-dim); }
+/* ─── Alerts ──────────────────────────────────────────────── */
+.alert-success  { background: rgba(16,185,129,.08);  border-color: rgba(16,185,129,.3);  color: #6ee7b7; }
+.alert-warning  { background: rgba(245,158,11,.08);  border-color: rgba(245,158,11,.3);  color: #fde68a; }
+.alert-danger   { background: rgba(239,68,68,.08);   border-color: rgba(239,68,68,.3);   color: #fca5a5; }
+.alert-info     { background: rgba(59,130,246,.08);  border-color: rgba(59,130,246,.3);  color: #93c5fd; }
+.alert-secondary{ background: rgba(100,116,139,.08); border-color: rgba(100,116,139,.25);color: var(--cs-text-muted); }
 
 /* ─── Dropdown ────────────────────────────────────────────── */
 .dropdown-menu-dark {
@@ -509,41 +543,36 @@ body {
 
 .dropdown-menu-dark .dropdown-divider { border-color: var(--cs-border); }
 
+/* ─── Breadcrumb ──────────────────────────────────────────── */
+.breadcrumb-item + .breadcrumb-item::before { color: var(--cs-text-dim); }
+
 /* ─── Flag icons ──────────────────────────────────────────── */
 .fi { border-radius: 2px; vertical-align: middle; }
 
-/* ─── Rider photo ─────────────────────────────────────────── */
-.rider-avatar {
-  width: 96px;
-  height: 116px;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
+/* ─── Countdown pill ──────────────────────────────────────── */
+.countdown-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(59, 130, 246, 0.13);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  color: #93c5fd;
+  border-radius: 30px;
+  padding: 2px 9px;
+  white-space: nowrap;
 }
 
-/* ─── Code ────────────────────────────────────────────────── */
-code {
-  color: var(--cs-accent);
-  background: var(--cs-accent-dim);
-  padding: .1em .4em;
-  border-radius: 4px;
-  font-size: .875em;
+/* ─── Today stage highlight ───────────────────────────────── */
+.stage-today {
+  background: rgba(245, 158, 11, 0.05) !important;
+  border-left: 2px solid var(--cs-accent) !important;
 }
-
-/* ─── Charts ──────────────────────────────────────────────── */
-canvas { max-height: 300px; }
-
-/* ─── Footer ──────────────────────────────────────────────── */
-footer {
-  background: var(--cs-bg-0) !important;
-  border-color: var(--cs-border) !important;
-}
-footer a:hover { color: var(--cs-accent) !important; }
 
 /* ─── Loading skeleton ────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -200% 0; }
   100% { background-position:  200% 0; }
 }
+
 .skeleton {
   background: linear-gradient(90deg, var(--cs-bg-2) 25%, var(--cs-bg-3) 50%, var(--cs-bg-2) 75%);
   background-size: 200% 100%;
@@ -560,55 +589,35 @@ main { animation: fadeIn 0.22s ease; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Today stage highlight ───────────────────────────────── */
-.stage-today {
-  background: rgba(245, 158, 11, 0.05) !important;
-  border-left: 2px solid var(--cs-accent) !important;
+/* ─── Footer ──────────────────────────────────────────────── */
+footer {
+  background: var(--cs-bg-0) !important;
+  border-color: var(--cs-border) !important;
 }
 
-/* ─── Countdown ───────────────────────────────────────────── */
-.countdown-pill {
-  font-size: 0.68rem;
-  font-weight: 700;
-  background: rgba(59, 130, 246, 0.13);
-  border: 1px solid rgba(59, 130, 246, 0.28);
-  color: #93c5fd;
-  border-radius: 30px;
-  padding: 2px 9px;
-  white-space: nowrap;
+footer a:hover { color: var(--cs-accent) !important; }
+
+/* ─── Code ────────────────────────────────────────────────── */
+code {
+  color: var(--cs-accent);
+  background: var(--cs-accent-dim);
+  padding: .1em .4em;
+  border-radius: 4px;
+  font-size: .875em;
 }
 
-/* ─── Quick action card ───────────────────────────────────── */
-.quick-card {
-  background: var(--cs-bg-2);
-  border: 1px solid var(--cs-border);
-  border-radius: var(--radius);
-  text-decoration: none;
-  display: block;
-  transition: all var(--t);
-}
-
-.quick-card:hover {
-  border-color: var(--cs-border-accent);
-  transform: translateY(-3px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
-  text-decoration: none;
-}
-
-/* ─── Sticky thead ────────────────────────────────────────── */
-.table-sticky-head thead th {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--cs-bg-2) !important;
+/* ─── Progress bar ────────────────────────────────────────── */
+.progress {
+  background: var(--cs-bg-3) !important;
+  border-radius: 4px;
 }
 
 /* ─── Responsive ──────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .hero-banner { padding: 2.5rem 0; }
-  .display-4 { font-size: 1.75rem; }
-  .display-6 { font-size: 1.3rem; }
-  .stat-value { font-size: 1.5rem; }
+  .hero-banner  { padding: 2.5rem 0; }
+  .display-4    { font-size: 1.75rem; }
+  .display-6    { font-size: 1.3rem; }
+  .stat-value   { font-size: 1.5rem; }
   .table-responsive { font-size: 0.8rem; }
   .nav-tabs { flex-wrap: nowrap; overflow-x: auto; }
 }

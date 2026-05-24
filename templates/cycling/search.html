@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}Recherche{% if query %} — {{ query }}{% endif %}{% endblock %}
+
+{% block breadcrumb %}
+<div class="container-fluid px-3 py-2" style="background:var(--cs-bg-1);border-bottom:1px solid var(--cs-border);">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0 small">
+      <li class="breadcrumb-item"><a href="{% url 'cycling:home' %}" class="text-secondary text-decoration-none">Accueil</a></li>
+      <li class="breadcrumb-item active text-warning">Recherche</li>
+    </ol>
+  </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Search form -->
+  <form method="get" class="mb-5">
+    <div class="row g-2 justify-content-center">
+      <div class="col-md-8">
+        <div class="input-group">
+          <span class="input-group-text" style="background:var(--cs-bg-3);border-color:var(--cs-border);">
+            <i class="bi bi-search text-secondary"></i>
+          </span>
+          <input type="text" name="q" class="form-control form-control-lg"
+                 placeholder="Coureur, course, équipe…"
+                 value="{{ query|default:'' }}" autofocus>
+          <button type="submit" class="btn btn-warning px-4">Rechercher</button>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  {% if query %}
+  <h2 class="fw-bold mb-4 fs-5">
+    Résultats pour <span class="text-warning">"{{ query }}"</span>
+    <span class="text-secondary fw-normal fs-6 ms-2">
+      ({{ riders|length|add:races|length|add:teams|length }} résultat{{ riders|length|add:races|length|add:teams|length|pluralize }})
+    </span>
+  </h2>
+
+  {% if not riders and not races and not teams %}
+  <div class="card p-5 text-center">
+    <i class="bi bi-search display-4 text-secondary mb-3"></i>
+    <p class="text-secondary mb-0">Aucun résultat pour <strong>"{{ query }}"</strong>.</p>
+  </div>
+  {% endif %}
+
+  <div class="row g-4">
+    <!-- Riders results -->
+    {% if riders %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-person-badge text-warning"></i>
+          <span>Coureurs</span>
+          <span class="badge bg-secondary ms-1">{{ riders|length }}</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <tbody>
+              {% for rider in riders %}
+              <tr>
+                <td style="width:40px;">
+                  <span class="fi fi-{{ rider.flag_code }}"></span>
+                </td>
+                <td>
+                  <a href="{{ rider.get_absolute_url }}" class="fw-semibold text-white text-decoration-none">
+                    {{ rider.name }}
+                  </a>
+                </td>
+                <td class="text-secondary d-none d-md-table-cell" style="font-size:.8rem;">{{ rider.nationality|default:"—" }}</td>
+                <td class="text-secondary d-none d-md-table-cell" style="font-size:.8rem;">{{ rider.team|default:"—" }}</td>
+                <td class="text-end">
+                  {% if rider.pcs_rank %}
+                  <span class="badge bg-secondary" style="font-size:.7rem;">#{{ rider.pcs_rank }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Races results -->
+    {% if races %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-trophy text-warning"></i>
+          <span>Courses</span>
+          <span class="badge bg-secondary ms-1">{{ races|length }}</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <tbody>
+              {% for race in races %}
+              <tr>
+                <td>
+                  <a href="{{ race.get_absolute_url }}" class="fw-semibold text-white text-decoration-none">
+                    {{ race.name }}
+                  </a>
+                </td>
+                <td class="text-secondary" style="font-size:.8rem;">{{ race.year }}</td>
+                <td class="d-none d-md-table-cell">
+                  <span class="badge bg-secondary" style="font-size:.65rem;">{{ race.classification }}</span>
+                </td>
+                <td class="d-none d-lg-table-cell">
+                  {% if race.winner %}
+                  <div class="d-flex align-items-center gap-2 text-secondary" style="font-size:.8rem;">
+                    <span class="fi fi-{{ race.winner.flag_code }}"></span>
+                    {{ race.winner.name }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Teams results -->
+    {% if teams %}
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header d-flex align-items-center gap-2">
+          <i class="bi bi-people text-warning"></i>
+          <span>Équipes</span>
+          <span class="badge bg-secondary ms-1">{{ teams|length }}</span>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover mb-0">
+            <tbody>
+              {% for team in teams %}
+              <tr>
+                <td style="width:40px;">
+                  <span class="fi fi-{{ team.flag_code }}"></span>
+                </td>
+                <td>
+                  <a href="{% url 'cycling:team_detail' team.slug team.year %}"
+                     class="fw-semibold text-white text-decoration-none">
+                    {{ team.name }}
+                  </a>
+                </td>
+                <td class="text-secondary" style="font-size:.8rem;">{{ team.year }}</td>
+                <td>
+                  <span class="badge bg-secondary" style="font-size:.65rem;">{{ team.status|default:"—" }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="card p-5 text-center">
+    <i class="bi bi-search display-4 text-secondary mb-3"></i>
+    <p class="text-secondary mb-0">Saisissez un nom de coureur, de course ou d'équipe.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
