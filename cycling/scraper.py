@@ -409,7 +409,6 @@ def _parse_results_table(soup: BeautifulSoup, race, stage=None, result_type: str
                 "dnf": dnf,
                 "dns": dns,
                 "dsq": dsq,
-                "is_stage": stage is not None,
             },
         )
         saved.append(result)
