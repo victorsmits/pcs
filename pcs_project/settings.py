@@ -21,21 +21,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     # Third-party
-    'rest_framework',
-    'crispy_forms',
-    'crispy_bootstrap5',
-    'django_filters',
     'django_extensions',
     # Local apps
-    'core',
-    'riders',
-    'races',
-    'teams',
-    'rankings',
+    'cycling',
 ]
 
-if DEBUG:
-    INSTALLED_APPS += ['debug_toolbar']
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -48,8 +38,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-if DEBUG:
-    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
 
 ROOT_URLCONF = 'pcs_project.urls'
 
@@ -64,7 +52,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'core.context_processors.global_context',
+                'cycling.context_processors.global_context',
             ],
         },
     },
@@ -109,25 +97,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Crispy Forms
-CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
-CRISPY_TEMPLATE_PACK = 'bootstrap5'
-
-# REST Framework
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 50,
-    'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-        'rest_framework.filters.OrderingFilter',
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
-    ],
-}
-
 # Cache
 CACHES = {
     'default': {
@@ -140,14 +109,8 @@ CACHES = {
     }
 }
 
-# Debug toolbar
-INTERNAL_IPS = ['127.0.0.1']
-
 # Pagination
 ITEMS_PER_PAGE = 50
-
-# PCS Scraper settings
-PCS_CACHE_TIMEOUT = 3600  # 1 hour
 
 # Trust proxy headers (for external reverse proxy)
 USE_X_FORWARDED_HOST = True

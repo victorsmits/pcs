@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+{% block title %}{{ race.name }} {{ race.year }} — Étape {{ stage.number }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="container-fluid px-3 py-2" style="background:var(--cs-bg-1);border-bottom:1px solid var(--cs-border);">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0 small">
+      <li class="breadcrumb-item"><a href="{% url 'cycling:home' %}" class="text-secondary text-decoration-none">Accueil</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'cycling:race_list' %}" class="text-secondary text-decoration-none">Courses</a></li>
+      <li class="breadcrumb-item"><a href="{{ race.get_absolute_url }}" class="text-secondary text-decoration-none">{{ race.name }} {{ race.year }}</a></li>
+      <li class="breadcrumb-item active text-warning">Étape {{ stage.number }}</li>
+    </ol>
+  </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Stage header -->
+<div style="background:linear-gradient(180deg,var(--cs-bg-0) 0%,var(--cs-bg-1) 100%);border-bottom:1px solid var(--cs-border);">
+  <div class="container py-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge
+            {% if 'flat' in stage.stage_type|lower %}stage-flat
+            {% elif 'mountain' in stage.stage_type|lower %}stage-mountain
+            {% elif 'hilly' in stage.stage_type|lower %}stage-hilly
+            {% elif 'tt' in stage.stage_type|lower %}stage-tt
+            {% else %}bg-secondary{% endif %}
+            ">{{ stage.get_stage_type_display }}</span>
+          <span class="text-secondary small">{{ stage.date|date:"d M Y" }}</span>
+          {% if stage.distance %}<span class="text-secondary small">· {{ stage.distance }} km</span>{% endif %}
+        </div>
+        <h1 class="fw-black mb-1" style="letter-spacing:-.03em;font-size:clamp(1.2rem,3.5vw,1.9rem);">
+          <span class="text-warning">Étape {{ stage.number }}</span>
+          <span class="text-secondary mx-2">·</span>
+          {{ stage.departure }}
+          <i class="bi bi-arrow-right text-secondary mx-2" style="font-size:.8em;"></i>
+          {{ stage.arrival }}
+        </h1>
+        <p class="text-secondary small mb-0">{{ race.name }} {{ race.year }}</p>
+      </div>
+
+      {% if stage.winner %}
+      <div class="card p-3">
+        <div class="text-secondary" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Vainqueur d'étape</div>
+        <a href="{{ stage.winner.get_absolute_url }}" class="d-flex align-items-center gap-2 text-decoration-none">
+          <span class="fi fi-{{ stage.winner.flag_code }} fs-5"></span>
+          <span class="fw-bold text-white" style="font-size:.95rem;">{{ stage.winner.name }}</span>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="container py-4">
+  <!-- Stage navigation -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    {% if prev_stage %}
+    <a href="{% url 'cycling:stage_detail' race.slug race.year prev_stage.number %}"
+       class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-chevron-left me-1"></i>Étape {{ prev_stage.number }}
+    </a>
+    {% else %}
+    <div></div>
+    {% endif %}
+    <a href="{{ race.get_absolute_url }}" class="btn btn-outline-warning btn-sm">
+      <i class="bi bi-list-ul me-1"></i>Toutes les étapes
+    </a>
+    {% if next_stage %}
+    <a href="{% url 'cycling:stage_detail' race.slug race.year next_stage.number %}"
+       class="btn btn-outline-secondary btn-sm">
+      Étape {{ next_stage.number }}<i class="bi bi-chevron-right ms-1"></i>
+    </a>
+    {% else %}
+    <div></div>
+    {% endif %}
+  </div>
+
+  <div class="row g-4">
+    <!-- Stage results -->
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">
+          <i class="bi bi-flag-fill me-2 text-warning"></i>Résultats de l'étape
+        </div>
+        {% if stage_results %}
+        <div id="stage-results-container"
+             {% if race.is_live %}
+             hx-get="{% url 'cycling:stage_results_fragment' race.slug race.year stage.number %}"
+             hx-trigger="every 30s"
+             hx-swap="innerHTML"
+             {% endif %}>
+          {% include 'partials/_stage_results.html' with results=stage_results stage=stage race=race %}
+        </div>
+        {% if race.is_live %}
+        <div class="p-2 d-flex align-items-center gap-2" style="border-top:1px solid var(--cs-border);">
+          <span class="spinner-border spinner-border-sm text-warning htmx-indicator" style="width:10px;height:10px;border-width:1.5px;"></span>
+          <span class="text-secondary" style="font-size:.72rem;">Actualisation auto toutes les 30 s</span>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="p-4 text-center text-secondary">Résultats non disponibles.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- GC after stage -->
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">
+          <i class="bi bi-trophy me-2 text-warning"></i>Classement général après l'étape
+        </div>
+        {% if gc_after_stage %}
+        {% include 'partials/_gc_table.html' with results=gc_after_stage is_live=race.is_live race=race %}
+        {% else %}
+        <div class="p-4 text-center text-secondary">CG non disponible.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

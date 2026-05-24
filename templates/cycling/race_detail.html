@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}{{ race.name }} {{ race.year }}{% endblock %}
+
+{% block breadcrumb %}
+<div class="container-fluid px-3 py-2" style="background:var(--cs-bg-1);border-bottom:1px solid var(--cs-border);">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb mb-0 small">
+      <li class="breadcrumb-item"><a href="{% url 'cycling:home' %}" class="text-secondary text-decoration-none">Accueil</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'cycling:race_list' %}" class="text-secondary text-decoration-none">Courses</a></li>
+      <li class="breadcrumb-item active text-warning">{{ race.name }} {{ race.year }}</li>
+    </ol>
+  </nav>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Race header -->
+<div style="background:linear-gradient(180deg,var(--cs-bg-0) 0%,var(--cs-bg-1) 100%);border-bottom:1px solid var(--cs-border);">
+  <div class="container py-4">
+    <div class="d-flex flex-wrap align-items-start gap-3">
+      <div class="flex-grow-1">
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+          {% if race.is_grand_tour %}
+          <span class="badge badge-grand-tour text-white px-2 py-1">Grand Tour</span>
+          {% elif race.is_monument %}
+          <span class="badge badge-monument text-white px-2 py-1">Monument</span>
+          {% else %}
+          <span class="badge bg-secondary text-white px-2 py-1">{{ race.classification }}</span>
+          {% endif %}
+          {% if race.is_live %}
+          <span class="badge d-inline-flex align-items-center gap-1"
+                style="background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.3);">
+            <span class="live-dot" style="width:5px;height:5px;"></span>EN DIRECT
+          </span>
+          {% endif %}
+        </div>
+        <h1 class="fw-black mb-1" style="letter-spacing:-.03em;font-size:clamp(1.4rem,4vw,2.2rem);">
+          {{ race.name }} <span class="text-warning">{{ race.year }}</span>
+        </h1>
+        <p class="text-secondary mb-0" style="font-size:.9rem;">
+          <i class="bi bi-calendar3 me-1"></i>{{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
+        </p>
+      </div>
+      {% if race.winner %}
+      <div class="card p-3" style="min-width:200px;">
+        <div class="text-secondary" style="font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;">Vainqueur</div>
+        <a href="{{ race.winner.get_absolute_url }}" class="d-flex align-items-center gap-2 text-decoration-none">
+          <span class="fi fi-{{ race.winner.flag_code }} fs-5"></span>
+          <div>
+            <div class="fw-bold text-white" style="font-size:.95rem;">{{ race.winner.name }}</div>
+            {% if race.winner_team %}<div class="text-secondary" style="font-size:.75rem;">{{ race.winner_team.name }}</div>{% endif %}
+          </div>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Live bar -->
+  {% if race.is_live %}
+  <div id="live-bar-container"
+       hx-get="{% url 'cycling:live_bar_fragment' race.slug race.year %}"
+       hx-trigger="every 60s"
+       hx-swap="innerHTML">
+    <div class="live-bar visible">
+      <span class="live-dot"></span>
+      <span>Mise à jour automatique activée</span>
+      <span class="htmx-indicator ms-2"><span class="spinner-border spinner-border-sm text-danger" style="width:10px;height:10px;border-width:1.5px;"></span></span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Tabs -->
+<div class="container py-4">
+  <ul class="nav nav-tabs mb-0" id="raceTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-gc" type="button">
+        <i class="bi bi-trophy me-1"></i>CG
+      </button>
+    </li>
+    {% if race.is_stage_race %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-stages" type="button">
+        <i class="bi bi-list-ol me-1"></i>Étapes
+      </button>
+    </li>
+    {% endif %}
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-start" type="button">
+        <i class="bi bi-people me-1"></i>Départ
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-info" type="button">
+        <i class="bi bi-info-circle me-1"></i>Info
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content">
+
+    <!-- GC tab -->
+    <div class="tab-pane fade show active" id="tab-gc" role="tabpanel">
+      {% if race.is_live %}
+      <div id="gc-live"
+           hx-get="{% url 'cycling:gc_fragment' race.slug race.year %}"
+           hx-trigger="every 30s"
+           hx-swap="innerHTML"
+           hx-indicator="#gc-spinner">
+        {% include 'partials/_gc_table.html' with results=gc_results is_live=True race=race %}
+      </div>
+      <div class="p-2 d-flex align-items-center gap-2" style="border-top:1px solid var(--cs-border);">
+        <span id="gc-spinner" class="htmx-indicator">
+          <span class="spinner-border spinner-border-sm text-warning" style="width:10px;height:10px;border-width:1.5px;"></span>
+        </span>
+        <span class="text-secondary" style="font-size:.72rem;">Actualisation auto toutes les 30 s</span>
+      </div>
+      {% else %}
+      {% include 'partials/_gc_table.html' with results=gc_results is_live=False race=race %}
+      {% endif %}
+    </div>
+
+    <!-- Stages tab -->
+    {% if race.is_stage_race %}
+    <div class="tab-pane fade" id="tab-stages" role="tabpanel">
+      {% if stages %}
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width:60px;">Étape</th>
+              <th style="width:110px;">Date</th>
+              <th>Parcours</th>
+              <th class="d-none d-md-table-cell">Type</th>
+              <th class="d-none d-md-table-cell text-end">Dist.</th>
+              <th>Vainqueur</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stage in stages %}
+            <tr class="{% if stage.is_today %}stage-today{% endif %}">
+              <td>
+                <a href="{% url 'cycling:stage_detail' race.slug race.year stage.number %}"
+                   class="fw-bold text-warning text-decoration-none">{{ stage.number }}</a>
+              </td>
+              <td class="text-secondary" style="font-size:.8rem;white-space:nowrap;">{{ stage.date|date:"d M" }}</td>
+              <td>
+                <a href="{% url 'cycling:stage_detail' race.slug race.year stage.number %}"
+                   class="text-white text-decoration-none" style="font-size:.875rem;">
+                  {{ stage.departure }} <i class="bi bi-arrow-right text-secondary mx-1" style="font-size:.7rem;"></i> {{ stage.arrival }}
+                </a>
+              </td>
+              <td class="d-none d-md-table-cell">
+                <span class="badge
+                  {% if 'flat' in stage.stage_type|lower or 'plat' in stage.stage_type|lower %}stage-flat
+                  {% elif 'mountain' in stage.stage_type|lower or 'montagne' in stage.stage_type|lower %}stage-mountain
+                  {% elif 'hilly' in stage.stage_type|lower or 'vallonné' in stage.stage_type|lower %}stage-hilly
+                  {% elif 'tt' in stage.stage_type|lower or 'contre-la-montre' in stage.stage_type|lower %}stage-tt
+                  {% else %}bg-secondary{% endif %}
+                  " style="font-size:.65rem;">
+                  {{ stage.get_stage_type_display }}
+                </span>
+              </td>
+              <td class="d-none d-md-table-cell text-secondary text-end" style="font-size:.8rem;">
+                {% if stage.distance %}{{ stage.distance }} km{% endif %}
+              </td>
+              <td>
+                {% if stage.winner %}
+                <a href="{{ stage.winner.get_absolute_url }}" class="d-flex align-items-center gap-2 text-decoration-none">
+                  <span class="fi fi-{{ stage.winner.flag_code }}"></span>
+                  <span class="text-white" style="font-size:.875rem;">{{ stage.winner.name }}</span>
+                </a>
+                {% elif race.is_live %}
+                <span class="text-secondary small">À venir</span>
+                {% else %}
+                <span class="text-secondary">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-center text-secondary">Aucune étape disponible.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Start list tab -->
+    <div class="tab-pane fade" id="tab-start" role="tabpanel">
+      {% if start_list %}
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width:50px;">Doss.</th>
+              <th>Coureur</th>
+              <th class="d-none d-md-table-cell">Équipe</th>
+              <th class="d-none d-lg-table-cell text-end">Rang PCS</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in start_list %}
+            <tr>
+              <td class="text-secondary" style="font-size:.8rem;">{{ entry.bib|default:"—" }}</td>
+              <td>
+                <a href="{{ entry.rider.get_absolute_url }}" class="d-flex align-items-center gap-2 text-decoration-none">
+                  <span class="fi fi-{{ entry.rider.flag_code }}"></span>
+                  <span class="text-white fw-semibold" style="font-size:.875rem;">{{ entry.rider.name }}</span>
+                </a>
+              </td>
+              <td class="d-none d-md-table-cell text-secondary" style="font-size:.8rem;">{{ entry.rider.team|default:"—" }}</td>
+              <td class="d-none d-lg-table-cell text-secondary text-end" style="font-size:.8rem;">{{ entry.rider.pcs_rank|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-4 text-center text-secondary">Liste de départ non disponible.</div>
+      {% endif %}
+    </div>
+
+    <!-- Info tab -->
+    <div class="tab-pane fade" id="tab-info" role="tabpanel">
+      <div class="p-4">
+        <div class="row g-4">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-warning mb-3">Informations</h6>
+            <dl class="row mb-0" style="font-size:.875rem;">
+              <dt class="col-5 text-secondary">Édition</dt>
+              <dd class="col-7">{{ race.year }}</dd>
+              <dt class="col-5 text-secondary">Classification</dt>
+              <dd class="col-7">{{ race.classification }}</dd>
+              <dt class="col-5 text-secondary">Date de début</dt>
+              <dd class="col-7">{{ race.start_date|date:"d M Y" }}</dd>
+              <dt class="col-5 text-secondary">Date de fin</dt>
+              <dd class="col-7">{{ race.end_date|date:"d M Y" }}</dd>
+            </dl>
+          </div>
+          {% if past_editions %}
+          <div class="col-md-6">
+            <h6 class="fw-bold text-warning mb-3">Éditions précédentes</h6>
+            <ul class="list-unstyled mb-0">
+              {% for edition in past_editions %}
+              <li class="d-flex justify-content-between align-items-center py-2 border-bottom" style="border-color:var(--cs-border)!important;font-size:.875rem;">
+                <a href="{{ edition.get_absolute_url }}" class="text-secondary text-decoration-none">{{ edition.year }}</a>
+                {% if edition.winner %}
+                <span class="d-flex align-items-center gap-2">
+                  <span class="fi fi-{{ edition.winner.flag_code }}"></span>
+                  <span class="text-white">{{ edition.winner.name }}</span>
+                </span>
+                {% endif %}
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>{# end tab-content #}
+</div>
+{% endblock %}
