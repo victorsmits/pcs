@@ -10,4 +10,5 @@ urlpatterns = [
     path('<slug:slug>/<int:year>/stages/', views.stage_list, name='stage_list'),
     path('<slug:slug>/<int:year>/stages/<int:stage_num>/', views.stage_detail, name='stage_detail'),
     path('<slug:slug>/<int:year>/fetch/', views.race_fetch, name='race_fetch'),
+    path('<slug:slug>/<int:year>/live/', views.race_live_api, name='race_live_api'),
 ]
