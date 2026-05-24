@@ -262,7 +262,7 @@ def _clean_race_name(raw: str) -> str:
 
 def _get_or_create_rider(slug: str, name: str, nat3: str = ""):
     """get_or_create a Rider; update nationality if missing."""
-    from riders.models import Rider
+    from cycling.models import Rider
     rider, created = Rider.objects.get_or_create(
         slug=slug,
         defaults={"name": name, "nationality": nat3},
@@ -275,7 +275,7 @@ def _get_or_create_rider(slug: str, name: str, nat3: str = ""):
 
 def _resolve_team_from_href(href: str, year: int):
     """Parse a PCS team href like 'team/ineos-grenadiers-2025' and return Team or None."""
-    from teams.models import Team
+    from cycling.models import Team
     href = href.lstrip("/")
     if not href.startswith("team/"):
         return None
@@ -302,7 +302,7 @@ def _parse_results_table(soup: BeautifulSoup, race, stage=None, result_type: str
 
     Returns a list of RaceResult model instances.
     """
-    from riders.models import RaceResult
+    from cycling.models import RaceResult
 
     table = soup.find("table", class_="results")
     if not table:
@@ -452,7 +452,7 @@ def _parse_date_dd_mm(text: str, year: int) -> Optional[date]:
 
 def _parse_races_list_soup(soup: BeautifulSoup, year: int, circuit_name: str) -> int:
     """Parse a race-list page and upsert Race objects. Returns count saved."""
-    from races.models import Race
+    from cycling.models import Race
 
     table = soup.find("table", class_="basic")
     if not table:
@@ -648,7 +648,7 @@ def _parse_stage_type(text: str) -> str:
 
 def _parse_stages_soup(soup: BeautifulSoup, race) -> list:
     """Parse a /stages page and upsert Stage objects. Returns list of Stage."""
-    from races.models import Stage
+    from cycling.models import Stage
 
     stages = []
     for row in soup.select("table.results tbody tr, table.basic tbody tr"):
@@ -722,13 +722,11 @@ def _parse_stages_soup(soup: BeautifulSoup, race) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _parse_rankings_page(soup: BeautifulSoup, year: int) -> int:
-    """Parse one PCS rankings page and upsert RiderRanking + Rider objects.
+    """Parse one PCS rankings page and upsert Rider objects.
 
     Returns number of entries processed.
     """
-    from riders.models import Rider
-    from rankings.models import RiderRanking
-    from teams.models import Team
+    from cycling.models import Rider, Team
 
     table = soup.find("table", class_=re.compile(r"results|basic"))
     if not table:
@@ -787,20 +785,6 @@ def _parse_rankings_page(soup: BeautifulSoup, year: int) -> int:
         if team_link:
             team_obj = _resolve_team_from_href(team_link.get("href", ""), year)
 
-        RiderRanking.objects.update_or_create(
-            rider=rider,
-            ranking_type="pcs",
-            year=year,
-            defaults={
-                "rank": rank,
-                "previous_rank": prev_rank,
-                "points": points,
-                "team": team_obj,
-                "nationality": nat3,
-            },
-        )
-
-        # Keep Rider.pcs_rank in sync for the current year
         current_year = date.today().year
         if year == current_year:
             Rider.objects.filter(pk=rider.pk).update(
@@ -892,8 +876,8 @@ def _parse_team_page_soup(soup: BeautifulSoup, slug: str, year: int) -> dict:
 
 
 def _save_team_roster(team, soup: BeautifulSoup) -> None:
-    """Parse rider links on a team page and upsert TeamRoster entries."""
-    from teams.models import TeamRoster
+    """Parse rider links on a team page and link each Rider to the team."""
+    from cycling.models import Rider
 
     seen: set[str] = set()
     for a in soup.find_all("a", href=re.compile(r"rider/")):
@@ -906,7 +890,6 @@ def _save_team_roster(team, soup: BeautifulSoup) -> None:
             continue
         seen.add(rider_slug)
 
-        # Nationality from flag sibling
         nat3 = ""
         flag = a.find_previous_sibling("span", class_="flag") or a.find_next_sibling("span", class_="flag")
         if flag:
@@ -915,7 +898,7 @@ def _save_team_roster(team, soup: BeautifulSoup) -> None:
                 nat3 = _flag2_to_nat3(classes[0])
 
         rider = _get_or_create_rider(rider_slug, rider_name, nat3)
-        TeamRoster.objects.get_or_create(team=team, rider=rider)
+        Rider.objects.filter(pk=rider.pk).update(current_team=team)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -949,7 +932,7 @@ def sync_race(slug: str, year: int, live: bool = False):
     Tries /gc first, then /result, then bare URL.
     Returns the Race instance (created or updated), or None on hard failure.
     """
-    from races.models import Race
+    from cycling.models import Race
 
     soup = None
     # Stage races have a /gc endpoint; 1-day races use /result
@@ -1055,11 +1038,11 @@ def sync_rankings(year: int) -> int:
 
 
 def sync_team(slug: str, year: int):
-    """Fetch a team detail page and persist Team + TeamRoster data.
+    """Fetch a team detail page and persist Team + rider roster data.
 
     Returns the Team instance, or None on failure.
     """
-    from teams.models import Team
+    from cycling.models import Team
 
     url = f"{PCS_BASE_URL}/team/{slug}-{year}"
     soup = get_soup(url)
@@ -1088,7 +1071,7 @@ def find_ongoing_races() -> QuerySet:
     Queries the DB first; if no races are found it triggers sync_races_year()
     for the current year and re-queries.
     """
-    from races.models import Race
+    from cycling.models import Race
 
     today = date.today()
     year = today.year
