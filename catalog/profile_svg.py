@@ -29,12 +29,15 @@ def build_profile_svg(elevation_points, min_ele=None, max_ele=None, max_km=None,
     if not polyline:
         return None
 
-    # Graduations d'altitude (h relatif : 0 = min_ele en bas, 100 = max_ele en haut)
+    # Graduations d'altitude. Avec min/max connus → labels en mètres ;
+    # sinon (profil extrait d'image) → lignes de grille sans valeurs.
     y_ticks = []
-    if min_ele is not None and max_ele is not None and max_ele > min_ele:
-        for frac in (0, 0.25, 0.5, 0.75, 1.0):
-            elev = min_ele + frac * (max_ele - min_ele)
-            y_ticks.append({'top_pct': round((1 - frac) * 100, 2), 'label': f'{round(elev)} m'})
+    has_meters = min_ele is not None and max_ele is not None and max_ele > min_ele
+    for frac in (0, 0.25, 0.5, 0.75, 1.0):
+        label = ''
+        if has_meters:
+            label = f'{round(min_ele + frac * (max_ele - min_ele))} m'
+        y_ticks.append({'top_pct': round((1 - frac) * 100, 2), 'label': label})
 
     # Graduations de distance
     x_ticks = []
