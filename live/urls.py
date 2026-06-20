@@ -6,5 +6,5 @@ app_name = 'live'
 
 urlpatterns = [
     path('', views.dashboard, name='dashboard'),
-    path('race/<slug:slug>/<int:year>/stage/<int:number>/', views.stage_live, name='stage_live'),
+    path('race/<pcsslug:slug>/<int:year>/stage/<int:number>/', views.stage_live, name='stage_live'),
 ]
