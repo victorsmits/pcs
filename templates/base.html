@@ -17,8 +17,15 @@
 </head>
 <body class="min-h-screen bg-ink-900 text-slate-200">
 
-  <header class="sticky top-0 z-30 border-b border-ink-700/70 bg-ink-900/85 backdrop-blur">
-    <nav class="container-app flex h-14 items-center gap-6">
+  <header class="sticky top-0 z-30 border-b border-ink-700/70 bg-ink-900/85 backdrop-blur"
+          x-data="{ mobileMenu: false }" @keydown.escape="mobileMenu=false">
+    <nav class="container-app flex h-14 items-center gap-4">
+      <button class="-ml-1 rounded p-1.5 text-slate-300 hover:bg-ink-700 md:hidden"
+              @click="mobileMenu = !mobileMenu" aria-label="Menu">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
       <a href="{% url 'catalog:home' %}" class="flex items-center gap-2 font-bold text-white">
         <span class="live-dot"></span><span>{{ SITE_NAME }}</span>
       </a>
@@ -62,6 +69,19 @@
         <span class="live-dot animate-pulse"></span> <span class="hidden sm:inline">En direct</span>
       </a>
     </nav>
+
+    {# Menu mobile #}
+    <div x-show="mobileMenu" x-cloak @click.outside="mobileMenu=false"
+         class="border-t border-ink-700/70 bg-ink-900 md:hidden">
+      <div class="container-app flex flex-col py-2 text-sm">
+        <a href="{% url 'live:dashboard' %}" class="rounded px-2 py-2 hover:bg-ink-800">Direct</a>
+        <a href="{% url 'catalog:calendar' %}" class="rounded px-2 py-2 hover:bg-ink-800">Calendrier</a>
+        <a href="{% url 'catalog:race_list' %}" class="rounded px-2 py-2 hover:bg-ink-800">Courses</a>
+        <a href="{% url 'catalog:rider_list' %}" class="rounded px-2 py-2 hover:bg-ink-800">Coureurs</a>
+        <a href="{% url 'catalog:team_list' %}" class="rounded px-2 py-2 hover:bg-ink-800">Équipes</a>
+        <a href="{% url 'catalog:rankings' %}" class="rounded px-2 py-2 hover:bg-ink-800">Classements</a>
+      </div>
+    </div>
   </header>
 
   <script>
