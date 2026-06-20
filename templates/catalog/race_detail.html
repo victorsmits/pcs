@@ -36,7 +36,10 @@
   {# Classement général / résultat #}
   {% if gc %}
   <div class="card card-pad">
-    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Classement général</h2>
+    <h2 class="mb-3 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+      Classement général
+      {% if gc_provisional %}<span class="badge-live"><span class="live-dot animate-pulse"></span> provisoire</span>{% endif %}
+    </h2>
     {% include 'components/results_table.html' with results=gc gap_label="Écart" %}
   </div>
   {% elif oneday %}

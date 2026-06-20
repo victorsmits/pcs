@@ -62,16 +62,21 @@ def race_detail(request, slug, year):
             pass
     stages = race.stages.all().order_by('number').select_related('winner')
 
+    today = date.today()
+    is_ongoing = bool(race.start_date and race.end_date and race.start_date <= today <= race.end_date)
     gc = []
     oneday = []
+    gc_provisional = False
     if race.is_stage_race:
-        if not Result.objects.filter(race=race, classification=ClassificationType.GC).exists():
+        # En course : on rafraîchit le GC provisoire à chaque visite
+        if is_ongoing or not Result.objects.filter(race=race, classification=ClassificationType.GC).exists():
             try:
-                services.sync_gc(race)
+                services.sync_gc(race, force=is_ongoing)
             except Exception:  # noqa: BLE001
                 pass
-        gc = (Result.objects.filter(race=race, classification=ClassificationType.GC)
-              .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
+        gc = list(Result.objects.filter(race=race, classification=ClassificationType.GC)
+                  .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
+        gc_provisional = is_ongoing and bool(gc) and not any(r.time_gap for r in gc)
     else:
         if not Result.objects.filter(race=race, stage__isnull=True).exists():
             try:
@@ -82,7 +87,8 @@ def race_detail(request, slug, year):
                   .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
 
     return render(request, 'catalog/race_detail.html', {
-        'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday, 'page_title': str(race),
+        'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday,
+        'gc_provisional': gc_provisional, 'ongoing_today': is_ongoing, 'page_title': str(race),
     })
 
 

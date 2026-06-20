@@ -69,6 +69,12 @@ def parse_results_table(soup_or_table, limit=200):
             m = re.search(r'\d+', c.get_text())
             return int(m.group()) if m else None
 
+        gc_cell = cell('gc')
+        gc_rank = None
+        if gc_cell:
+            m = re.search(r'\d+', gc_cell.get_text())
+            gc_rank = int(m.group()) if m else None
+
         flag = row.find('span', class_='flag')
         nat = ''
         if flag:
@@ -81,6 +87,7 @@ def parse_results_table(soup_or_table, limit=200):
             'team_slug': team_slug, 'team_year': team_year, 'team_name': team_name,
             'time': time_val, 'time_gap': gap,
             'points_uci': num('uci'), 'points_pcs': num('pnt'),
+            'gc_rank': gc_rank,
             'nat': nat,
         })
     return results

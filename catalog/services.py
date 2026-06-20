@@ -166,21 +166,65 @@ def sync_stage_results(stage, force=True):
 
 
 def sync_gc(race, force=False):
-    """Récupère et stocke le classement général d'une course par étapes."""
+    """Classement général. GC officiel si dispo (édition terminée), sinon GC
+    provisoire dérivé de la colonne « GC » de la dernière étape disputée."""
     t0 = time.monotonic()
     url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/gc'
     soup = pcs_client.get_soup(url, cache_ttl=300, force=force)
-    if not soup:
+    rows = parse_results_table(soup) if soup else []
+
+    if rows:  # GC officiel (server-side)
+        saved = _save_results(race, rows, ClassificationType.GC)
+        leader = next((x for x in rows if x['rank'] == 1), None)
+        if leader:
+            race.winner = get_or_create_rider(leader['rider_slug'], leader['rider_name'])
+            race.save(update_fields=['winner'])
+        _log('results', f'{race.slug}/{race.year}/gc', SyncLog.Status.OK, f'{saved} au GC',
+             int((time.monotonic() - t0) * 1000))
+        return saved
+
+    # --- GC provisoire (course en cours) ---
+    return _sync_provisional_gc(race, t0)
+
+
+def _sync_provisional_gc(race, t0=None):
+    """Construit un GC provisoire à partir de la colonne GC de la dernière étape."""
+    from datetime import date as _date
+    t0 = t0 or time.monotonic()
+    # On parcourt les étapes disputées de la plus récente à la plus ancienne
+    # jusqu'à en trouver une dont les résultats portent une colonne GC.
+    candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number'))
+    if not candidates:
+        candidates = list(race.stages.order_by('-number'))
+    rows = []
+    used = None
+    for st in candidates:
+        url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/stage-{st.number}'
+        soup = pcs_client.get_soup(url, cache_ttl=120)
+        if not soup:
+            continue
+        gc_rows = [r for r in parse_results_table(soup) if r.get('gc_rank')]
+        if gc_rows:
+            rows, used = gc_rows, st
+            break
+    if not rows:
         return 0
-    rows = parse_results_table(soup)
-    saved = _save_results(race, rows, ClassificationType.GC)
-    leader = next((x for x in rows if x['rank'] == 1), None)
-    if leader:
-        race.winner = get_or_create_rider(leader['rider_slug'], leader['rider_name'])
-        race.save(update_fields=['winner'])
-    _log('results', f'{race.slug}/{race.year}/gc',
-         SyncLog.Status.OK if saved else SyncLog.Status.EMPTY,
-         f'{saved} au GC', int((time.monotonic() - t0) * 1000))
+    rows.sort(key=lambda r: r['gc_rank'])
+    latest = used
+    Result.objects.filter(race=race, classification=ClassificationType.GC).delete()
+    saved = 0
+    for r in rows[:60]:
+        rider = get_or_create_rider(r['rider_slug'], r['rider_name'], r.get('nat', ''))
+        if not rider:
+            continue
+        team = get_or_create_team(r['team_slug'], r['team_year'], r['team_name'])
+        Result.objects.update_or_create(
+            race=race, stage=None, rider=rider, classification=ClassificationType.GC,
+            defaults={'team': team, 'rank': r['gc_rank'], 'time_gap': '', 'status': r['status']},
+        )
+        saved += 1
+    _log('results', f'{race.slug}/{race.year}/gc', SyncLog.Status.OK,
+         f'GC provisoire {saved} (étape {latest.number})', int((time.monotonic() - t0) * 1000))
     return saved
 
 
