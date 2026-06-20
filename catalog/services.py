@@ -10,7 +10,10 @@ from core.parsers.calendar import parse_calendar
 from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_images, parse_stage_winners
 from core.parsers.profile import extract_elevation_points
 from core.parsers.live import parse_live_data, keypoints_from_data
-from catalog.models import Race, Stage, Climb, Rider, Category, StageType
+from core.parsers.results import parse_results_table
+from catalog.models import (
+    Race, Stage, Climb, Rider, Team, Result, Category, StageType, ClassificationType,
+)
 
 logger = logging.getLogger('catalog')
 
@@ -46,9 +49,16 @@ def get_or_create_rider(slug, name='', nationality=''):
     rider, created = Rider.objects.get_or_create(
         slug=slug, defaults={'name': name or slug.replace('-', ' ').title(), 'nationality': nationality},
     )
-    if not created and name and rider.name != name and rider.name == slug.replace('-', ' ').title():
+    updates = []
+    # Rafraîchit un nom « stub » (sans espace, ou dérivé du slug) avec un meilleur nom
+    if name and name != rider.name and (' ' not in rider.name or rider.name == slug.replace('-', ' ').title()):
         rider.name = name
-        rider.save(update_fields=['name'])
+        updates.append('name')
+    if nationality and not rider.nationality:
+        rider.nationality = nationality
+        updates.append('nationality')
+    if updates:
+        rider.save(update_fields=updates)
     return rider
 
 
@@ -100,6 +110,96 @@ def sync_calendar(year, circuits=None):
         logger.info('Calendrier %s/%s : %s courses', year, key, saved)
 
     return total
+
+
+def get_or_create_team(slug, year, name=''):
+    if not slug:
+        return None
+    year = year or 0
+    team = (Team.objects.filter(slug=slug, year=year).first()
+            or Team.objects.filter(slug=slug).order_by('-year').first())
+    if team:
+        return team
+    return Team.objects.create(slug=slug, year=year or None,
+                               name=name or slug.replace('-', ' ').title())
+
+
+def _save_results(race, rows, classification, stage=None):
+    """Upsert d'une liste de résultats parsés pour un classement donné."""
+    saved = 0
+    for r in rows:
+        rider = get_or_create_rider(r['rider_slug'], r['rider_name'], r.get('nat', ''))
+        if not rider:
+            continue
+        team = get_or_create_team(r['team_slug'], r['team_year'], r['team_name'])
+        Result.objects.update_or_create(
+            race=race, stage=stage, rider=rider, classification=classification,
+            defaults={
+                'team': team, 'rank': r['rank'],
+                'time_gap': (r['time_gap'] or r['time'])[:30],
+                'points_uci': r['points_uci'], 'points_pcs': r['points_pcs'],
+                'status': r['status'],
+            },
+        )
+        saved += 1
+    return saved
+
+
+def sync_stage_results(stage, force=True):
+    """Récupère et stocke les résultats d'une étape (classement d'étape)."""
+    t0 = time.monotonic()
+    url = f'{pcs_client.PCS_BASE_URL}/race/{stage.race.slug}/{stage.race.year}/stage-{stage.number}'
+    soup = pcs_client.get_soup(url, cache_ttl=120, force=force)
+    if not soup:
+        return 0
+    rows = parse_results_table(soup)
+    saved = _save_results(stage.race, rows, ClassificationType.STAGE, stage=stage)
+    # Vainqueur d'étape
+    winner_row = next((x for x in rows if x['rank'] == 1), None)
+    if winner_row:
+        w = get_or_create_rider(winner_row['rider_slug'], winner_row['rider_name'])
+        Stage.objects.filter(pk=stage.pk).update(winner=w)
+    _log('results', f'{stage.race.slug}/{stage.race.year}/{stage.number}',
+         SyncLog.Status.OK if saved else SyncLog.Status.EMPTY,
+         f'{saved} résultats', int((time.monotonic() - t0) * 1000))
+    return saved
+
+
+def sync_gc(race, force=False):
+    """Récupère et stocke le classement général d'une course par étapes."""
+    t0 = time.monotonic()
+    url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/gc'
+    soup = pcs_client.get_soup(url, cache_ttl=300, force=force)
+    if not soup:
+        return 0
+    rows = parse_results_table(soup)
+    saved = _save_results(race, rows, ClassificationType.GC)
+    leader = next((x for x in rows if x['rank'] == 1), None)
+    if leader:
+        race.winner = get_or_create_rider(leader['rider_slug'], leader['rider_name'])
+        race.save(update_fields=['winner'])
+    _log('results', f'{race.slug}/{race.year}/gc',
+         SyncLog.Status.OK if saved else SyncLog.Status.EMPTY,
+         f'{saved} au GC', int((time.monotonic() - t0) * 1000))
+    return saved
+
+
+def sync_oneday_result(race, force=False):
+    """Récupère le résultat d'une course d'un jour (classement unique, stage=None)."""
+    for suffix in ('result', ''):
+        url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/{suffix}'.rstrip('/')
+        soup = pcs_client.get_soup(url, cache_ttl=300, force=force)
+        if soup and soup.find('table', class_='results'):
+            rows = parse_results_table(soup)
+            saved = _save_results(race, rows, ClassificationType.STAGE, stage=None)
+            leader = next((x for x in rows if x['rank'] == 1), None)
+            if leader:
+                race.winner = get_or_create_rider(leader['rider_slug'], leader['rider_name'])
+                race.save(update_fields=['winner'])
+            _log('results', f'{race.slug}/{race.year}/result',
+                 SyncLog.Status.OK if saved else SyncLog.Status.EMPTY, f'{saved} résultats')
+            return saved
+    return 0
 
 
 def sync_race_detail(race, force=False):

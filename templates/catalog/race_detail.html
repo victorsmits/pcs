@@ -33,6 +33,19 @@
     </dl>
   </div>
 
+  {# Classement général / résultat #}
+  {% if gc %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Classement général</h2>
+    {% include 'components/results_table.html' with results=gc gap_label="Écart" %}
+  </div>
+  {% elif oneday %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Résultat</h2>
+    {% include 'components/results_table.html' with results=oneday gap_label="Temps" %}
+  </div>
+  {% endif %}
+
   {# Étapes #}
   {% if stages %}
   <div>

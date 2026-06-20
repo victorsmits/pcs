@@ -58,6 +58,14 @@
     </dl>
   </div>
 
+  {# Résultats #}
+  {% if results %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Résultats de l'étape</h2>
+    {% include 'components/results_table.html' with results=results gap_label="Temps" %}
+  </div>
+  {% endif %}
+
   {# Cols & points clés #}
   {% if climbs %}
   <div class="card card-pad">

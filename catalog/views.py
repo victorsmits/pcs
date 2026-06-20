@@ -2,9 +2,10 @@
 Les vues seront enrichies en Phase 1 (fetch à la demande, contenus réels)."""
 from datetime import date
 
+from django.db.models import F
 from django.shortcuts import render, get_object_or_404
 
-from catalog.models import Race, Stage, Rider, Team, Ranking
+from catalog.models import Race, Stage, Rider, Team, Ranking, Result, ClassificationType
 from catalog import services
 from catalog.profile_svg import build_profile_svg
 
@@ -59,8 +60,30 @@ def race_detail(request, slug, year):
             services.sync_race_detail(race)
         except Exception:  # noqa: BLE001
             pass
-    stages = race.stages.all().order_by('number')
-    return render(request, 'catalog/race_detail.html', {'race': race, 'stages': stages, 'page_title': str(race)})
+    stages = race.stages.all().order_by('number').select_related('winner')
+
+    gc = []
+    oneday = []
+    if race.is_stage_race:
+        if not Result.objects.filter(race=race, classification=ClassificationType.GC).exists():
+            try:
+                services.sync_gc(race)
+            except Exception:  # noqa: BLE001
+                pass
+        gc = (Result.objects.filter(race=race, classification=ClassificationType.GC)
+              .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
+    else:
+        if not Result.objects.filter(race=race, stage__isnull=True).exists():
+            try:
+                services.sync_oneday_result(race)
+            except Exception:  # noqa: BLE001
+                pass
+        oneday = (Result.objects.filter(race=race, stage__isnull=True)
+                  .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
+
+    return render(request, 'catalog/race_detail.html', {
+        'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday, 'page_title': str(race),
+    })
 
 
 def stage_detail(request, slug, year, number):
@@ -73,9 +96,18 @@ def stage_detail(request, slug, year, number):
     climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
     profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
                                 stage.max_elevation, stage.distance, climbs=climbs)
+
+    if not Result.objects.filter(stage=stage, classification=ClassificationType.STAGE).exists():
+        try:
+            services.sync_stage_results(stage)
+        except Exception:  # noqa: BLE001
+            pass
+    results = (Result.objects.filter(stage=stage, classification=ClassificationType.STAGE)
+               .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
+
     return render(request, 'catalog/stage_detail.html', {
         'stage': stage, 'race': stage.race, 'profile': profile,
-        'climbs': stage.climbs.all(), 'page_title': str(stage),
+        'climbs': stage.climbs.all(), 'results': results, 'page_title': str(stage),
     })
 
 
