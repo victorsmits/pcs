@@ -1,10 +1,43 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="space-y-5">
 
-<a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
-<h1 class="text-2xl font-bold mt-2">Étape {{ stage.number }}</h1>
-<p class="num mt-1 text-sm text-slate-400">{{ stage.departure }} → {{ stage.arrival }}{% if stage.distance %} · {{ stage.distance }} km{% endif %}</p>
-<div class="card card-pad mt-4 text-sm text-slate-400">Profil et résultats : Phase 1 / Phase 2.</div>
+  <div>
+    <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}"
+       class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
+    <div class="mt-2 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-2xl font-bold">Étape {{ stage.number }}</h1>
+        <p class="num mt-1 text-sm text-slate-400">
+          {{ stage.departure }} → {{ stage.arrival }}{% if stage.distance %} · {{ stage.distance }} km{% endif %}
+          {% if stage.date %} · {{ stage.date|date:"d M Y" }}{% endif %}
+        </p>
+      </div>
+      <a href="{% url 'live:stage_live' slug=race.slug year=race.year number=stage.number %}" class="btn-live">
+        <span class="live-dot"></span> Live
+      </a>
+    </div>
+  </div>
 
+  {# Profil #}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Profil</h2>
+    {% include 'components/profile_svg.html' with profile=profile image_url=stage.profile_image_url %}
+  </div>
+
+  {# Infos générales #}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Informations</h2>
+    <dl class="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-4">
+      {% if stage.distance %}<div><dt class="text-slate-500">Distance</dt><dd class="num">{{ stage.distance }} km</dd></div>{% endif %}
+      {% if stage.vertical_meters %}<div><dt class="text-slate-500">Dénivelé +</dt><dd class="num">{{ stage.vertical_meters }} m</dd></div>{% endif %}
+      {% if stage.profile_score %}<div><dt class="text-slate-500">ProfileScore</dt><dd class="num">{{ stage.profile_score }}</dd></div>{% endif %}
+      {% if stage.gradient_final %}<div><dt class="text-slate-500">Pente derniers km</dt><dd class="num">{{ stage.gradient_final }}%</dd></div>{% endif %}
+      <div><dt class="text-slate-500">Départ</dt><dd>{{ stage.departure|default:"—" }}</dd></div>
+      <div><dt class="text-slate-500">Arrivée</dt><dd>{{ stage.arrival|default:"—" }}</dd></div>
+    </dl>
+  </div>
+
+</div>
 {% endblock %}

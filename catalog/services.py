@@ -7,7 +7,9 @@ from django.utils import timezone
 from core import pcs_client
 from core.models import SyncLog
 from core.parsers.calendar import parse_calendar
-from catalog.models import Race, Rider, Category
+from core.parsers.stage import parse_stage_info, parse_stage_list
+from core.parsers.profile import extract_elevation_points
+from catalog.models import Race, Stage, Rider, Category, StageType
 
 logger = logging.getLogger('catalog')
 
@@ -97,3 +99,60 @@ def sync_calendar(year, circuits=None):
         logger.info('Calendrier %s/%s : %s courses', year, key, saved)
 
     return total
+
+
+def sync_race_detail(race, force=False):
+    """Récupère la page course et crée/maj les étapes (course par étapes)."""
+    if race.detail_synced_at and not force:
+        return race
+
+    t0 = time.monotonic()
+    url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}'
+    soup = pcs_client.get_soup(url, cache_ttl=1800, force=force)
+    if not soup:
+        _log('race', f'{race.slug}/{race.year}', SyncLog.Status.ERROR, 'fetch échoué')
+        return race
+
+    stages = parse_stage_list(soup)
+    for s in stages:
+        Stage.objects.update_or_create(
+            race=race, number=s['number'],
+            defaults={'departure': s['departure'][:120], 'arrival': s['arrival'][:120]},
+        )
+    if stages and not race.is_stage_race:
+        race.is_stage_race = True
+
+    race.detail_synced_at = timezone.now()
+    race.save(update_fields=['is_stage_race', 'detail_synced_at'])
+    _log('race', f'{race.slug}/{race.year}', SyncLog.Status.OK,
+         f'{len(stages)} étapes', int((time.monotonic() - t0) * 1000))
+    return race
+
+
+def sync_stage_detail(stage, force=False):
+    """Récupère infos + image profil (page étape) et points d'altitude (page live)."""
+    if stage.detail_synced_at and not force:
+        return stage
+
+    t0 = time.monotonic()
+    base = f'{pcs_client.PCS_BASE_URL}/race/{stage.race.slug}/{stage.race.year}/stage-{stage.number}'
+
+    soup = pcs_client.get_soup(base, cache_ttl=1800, force=force)
+    if soup:
+        info = parse_stage_info(soup)
+        for field, value in info.items():
+            if value not in (None, ''):
+                setattr(stage, field, value)
+
+    # Profil d'altitude depuis la page live (polygone clip-path)
+    live_html = pcs_client.fetch_text(base + '/live', cache_ttl=1800, force=force)
+    if live_html:
+        points = extract_elevation_points(live_html)
+        if points:
+            stage.elevation_points = points
+
+    stage.detail_synced_at = timezone.now()
+    stage.save()
+    _log('stage', f'{stage.race.slug}/{stage.race.year}/{stage.number}', SyncLog.Status.OK,
+         f'{len(stage.elevation_points)} pts profil', int((time.monotonic() - t0) * 1000))
+    return stage

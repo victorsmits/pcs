@@ -5,6 +5,8 @@ from datetime import date
 from django.shortcuts import render, get_object_or_404
 
 from catalog.models import Race, Stage, Rider, Team, Ranking
+from catalog import services
+from catalog.profile_svg import build_profile_svg
 
 
 def home(request):
@@ -52,13 +54,26 @@ def rankings(request):
 
 def race_detail(request, slug, year):
     race = get_object_or_404(Race, slug=slug, year=year)
+    if not race.detail_synced_at:
+        try:
+            services.sync_race_detail(race)
+        except Exception:  # noqa: BLE001
+            pass
     stages = race.stages.all().order_by('number')
     return render(request, 'catalog/race_detail.html', {'race': race, 'stages': stages, 'page_title': str(race)})
 
 
 def stage_detail(request, slug, year, number):
     stage = get_object_or_404(Stage, race__slug=slug, race__year=year, number=number)
-    return render(request, 'catalog/stage_detail.html', {'stage': stage, 'race': stage.race, 'page_title': str(stage)})
+    if not stage.detail_synced_at:
+        try:
+            services.sync_stage_detail(stage)
+        except Exception:  # noqa: BLE001
+            pass
+    profile = build_profile_svg(stage.elevation_points)
+    return render(request, 'catalog/stage_detail.html', {
+        'stage': stage, 'race': stage.race, 'profile': profile, 'page_title': str(stage),
+    })
 
 
 def rider_detail(request, slug):

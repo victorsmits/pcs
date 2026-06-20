@@ -1,0 +1,33 @@
+{% comment %}
+Profil d'altitude en SVG. Contexte attendu : `profile` (dict de build_profile_svg).
+Optionnel : `progress_pct` (0-100) pour la barre de progression live.
+{% endcomment %}
+{% if profile %}
+<div class="relative w-full overflow-hidden rounded-lg bg-ink-800">
+  <svg viewBox="0 0 {{ profile.width }} {{ profile.height }}" preserveAspectRatio="none"
+       class="block h-40 w-full sm:h-48" role="img" aria-label="Profil d'altitude de l'étape">
+    <defs>
+      <linearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.04"/>
+      </linearGradient>
+    </defs>
+    <path d="{{ profile.area }}" fill="url(#profileFill)"/>
+    <polyline points="{{ profile.polyline }}" fill="none" stroke="#60a5fa"
+              stroke-width="2" vector-effect="non-scaling-stroke"/>
+    {% for c in profile.climbs %}
+      <line x1="{{ c.x }}" y1="0" x2="{{ c.x }}" y2="{{ profile.height }}"
+            stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 3"
+            vector-effect="non-scaling-stroke" opacity="0.7"/>
+    {% endfor %}
+    {% if progress_pct %}
+      <line x1="{{ progress_pct }}%" y1="0" x2="{{ progress_pct }}%" y2="{{ profile.height }}"
+            stroke="#ef4444" stroke-width="2" vector-effect="non-scaling-stroke"/>
+    {% endif %}
+  </svg>
+</div>
+{% elif image_url %}
+  <img src="{{ image_url }}" alt="Profil de l'étape" class="w-full rounded-lg bg-white">
+{% else %}
+  <div class="rounded-lg bg-ink-800 p-6 text-center text-sm text-slate-500">Profil indisponible</div>
+{% endif %}
