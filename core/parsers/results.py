@@ -17,6 +17,33 @@ def _header_map(table):
     return mapping
 
 
+def find_standings_table(soup):
+    """Sélectionne la table de CLASSEMENT (GC/points/…) parmi les table.results.
+
+    Une table de classement a une colonne « Prev » (position précédente) et PAS de
+    colonne « GC » (laquelle n'apparaît que dans les résultats d'étape). On exige
+    aussi des liens coureurs et un rang 1 en tête.
+    """
+    best, best_score = None, -10
+    for t in soup.find_all('table', class_='results'):
+        head = [th.get_text(strip=True).lower() for th in t.select('thead th')]
+        rows = t.select('tbody tr')
+        rider_links = t.find_all('a', href=lambda h: h and 'rider/' in h)
+        if not rows or len(rider_links) < 5:
+            continue
+        score = 0
+        if 'prev' in head:
+            score += 3
+        if 'gc' in head:
+            score -= 3            # colonne GC ⇒ table de résultats d'étape
+        if 'time' in head:
+            score += 1
+        score += min(len(rows), 50) / 100.0   # léger bonus aux tables fournies
+        if score > best_score:
+            best, best_score = t, score
+    return best
+
+
 def parse_results_table(soup_or_table, limit=200):
     """Parse une table.results → liste de dicts.
 

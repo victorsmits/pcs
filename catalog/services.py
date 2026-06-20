@@ -10,7 +10,7 @@ from core.parsers.calendar import parse_calendar
 from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_images, parse_stage_winners
 from core.parsers.profile import extract_elevation_points
 from core.parsers.live import parse_live_data, keypoints_from_data
-from core.parsers.results import parse_results_table
+from core.parsers.results import parse_results_table, find_standings_table
 from core.parsers.rider import parse_rider
 from core.parsers.team import parse_team
 from catalog.models import (
@@ -173,7 +173,7 @@ def sync_gc(race, force=False):
     t0 = time.monotonic()
     url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/gc'
     soup = pcs_client.get_soup(url, cache_ttl=300, force=force)
-    rows = parse_results_table(soup) if soup else []
+    rows = parse_results_table(find_standings_table(soup)) if soup else []
 
     if rows:  # GC officiel (server-side)
         saved = _save_results(race, rows, ClassificationType.GC)
@@ -307,8 +307,19 @@ def get_past_editions(race, n=6):
     return editions
 
 
+# Ordre conventionnel des maillots PCS (label, couleur CSS)
+JERSEY_LABELS = [
+    ('Leader', 'amber'),
+    ('Points', 'green'),
+    ('Montagne', 'red'),
+    ('Jeunes', 'white'),
+    ('Combatif', 'blue'),
+]
+
+
 def get_jersey_wearers(race):
-    """Porteurs de maillots après la dernière étape disputée (1er = leader général)."""
+    """Porteurs de maillots après la dernière étape disputée, labellisés par ordre
+    conventionnel (Leader, Points, Montagne, Jeunes…). Renvoie [{rider,label,color}]."""
     from datetime import date as _date
     from core.parsers.stage import parse_jersey_wearers
     candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number')) \
@@ -320,8 +331,14 @@ def get_jersey_wearers(race):
             continue
         wearers = parse_jersey_wearers(soup)
         if wearers:
-            riders = [get_or_create_rider(w['slug'], w['name']) for w in wearers]
-            return [r for r in riders if r]
+            out = []
+            for i, w in enumerate(wearers):
+                rider = get_or_create_rider(w['slug'], w['name'])
+                if not rider:
+                    continue
+                label, color = JERSEY_LABELS[i] if i < len(JERSEY_LABELS) else (f'Maillot {i + 1}', 'slate')
+                out.append({'rider': rider, 'label': label, 'color': color})
+            return out
     return []
 
 

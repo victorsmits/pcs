@@ -38,10 +38,14 @@
   <div class="card card-pad">
     <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Porteurs de maillots</h2>
     <div class="flex flex-wrap gap-3">
-      {% for rider in jersey_riders %}
-      <a href="{{ rider.get_absolute_url }}" class="flex items-center gap-2 rounded-lg bg-ink-800 px-3 py-2 hover:bg-ink-700">
-        {% if forloop.first %}<span class="h-3 w-3 rounded-full bg-accent-400" title="Leader"></span>{% endif %}
-        <span class="text-sm">{{ rider.name }}</span>
+      {% for j in jersey_riders %}
+      <a href="{{ j.rider.get_absolute_url }}" class="flex items-center gap-2 rounded-lg bg-ink-800 px-3 py-2 hover:bg-ink-700">
+        <span class="h-3 w-3 rounded-full
+          {% if j.color == 'amber' %}bg-accent-400{% elif j.color == 'green' %}bg-green-500
+          {% elif j.color == 'red' %}bg-red-500{% elif j.color == 'white' %}bg-white
+          {% elif j.color == 'blue' %}bg-brand-500{% else %}bg-slate-500{% endif %}"></span>
+        <span class="text-xs text-slate-500">{{ j.label }}</span>
+        <span class="text-sm">{{ j.rider.name }}</span>
       </a>
       {% endfor %}
     </div>
