@@ -11,8 +11,10 @@ from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_i
 from core.parsers.profile import extract_elevation_points
 from core.parsers.live import parse_live_data, keypoints_from_data
 from core.parsers.results import parse_results_table
+from core.parsers.rider import parse_rider
+from core.parsers.team import parse_team
 from catalog.models import (
-    Race, Stage, Climb, Rider, Team, Result, Category, StageType, ClassificationType,
+    Race, Stage, Climb, Rider, Team, Membership, Result, Category, StageType, ClassificationType,
 )
 
 logger = logging.getLogger('catalog')
@@ -226,6 +228,54 @@ def _sync_provisional_gc(race, t0=None):
     _log('results', f'{race.slug}/{race.year}/gc', SyncLog.Status.OK,
          f'GC provisoire {saved} (étape {latest.number})', int((time.monotonic() - t0) * 1000))
     return saved
+
+
+def sync_rider(rider, force=False):
+    """Récupère la page coureur : met à jour le modèle, renvoie le dict parsé (avec top_results)."""
+    url = f'{pcs_client.PCS_BASE_URL}/rider/{rider.slug}'
+    soup = pcs_client.get_soup(url, cache_ttl=86400, force=force)
+    if not soup:
+        return None
+    data = parse_rider(soup)
+    fields = []
+    for attr in ('birthdate', 'weight', 'height', 'photo_url'):
+        if data.get(attr) and getattr(rider, attr) != data[attr]:
+            setattr(rider, attr, data[attr]); fields.append(attr)
+    if data.get('nationality') and not rider.nationality:
+        rider.nationality = data['nationality']; fields.append('nationality')
+    if data.get('specialties'):
+        rider.specialties = data['specialties']; fields.append('specialties')
+    if data.get('team_slug'):
+        team = get_or_create_team(data['team_slug'], None, data.get('team_name', ''))
+        if team and rider.current_team_id != team.id:
+            rider.current_team = team; fields.append('current_team')
+    rider.detail_synced_at = timezone.now(); fields.append('detail_synced_at')
+    rider.save(update_fields=fields)
+    _log('rider', rider.slug, SyncLog.Status.OK, f'{len(data["top_results"])} résultats')
+    return data
+
+
+def sync_team(team, force=False):
+    """Récupère la page équipe : met à jour le modèle + effectif (Membership)."""
+    url = f'{pcs_client.PCS_BASE_URL}/team/{team.slug}-{team.year}'
+    soup = pcs_client.get_soup(url, cache_ttl=86400, force=force)
+    if not soup:
+        return None
+    data = parse_team(soup)
+    if data.get('level') and not team.level:
+        team.level = data['level']
+    if data.get('nationality') and not team.nationality:
+        team.nationality = data['nationality']
+    team.detail_synced_at = timezone.now()
+    team.save()
+    roster = []
+    for r in data['roster']:
+        rider = get_or_create_rider(r['slug'], r['name'])
+        if rider:
+            Membership.objects.update_or_create(team=team, rider=rider, year=team.year)
+            roster.append(rider)
+    _log('team', f'{team.slug}/{team.year}', SyncLog.Status.OK, f'{len(roster)} coureurs')
+    return data
 
 
 def sync_oneday_result(race, force=False):

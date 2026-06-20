@@ -119,9 +119,28 @@ def stage_detail(request, slug, year, number):
 
 def rider_detail(request, slug):
     rider = get_object_or_404(Rider, slug=slug)
-    return render(request, 'catalog/rider_detail.html', {'rider': rider, 'page_title': rider.name})
+    data = None
+    try:
+        data = services.sync_rider(rider, force=not rider.detail_synced_at)
+        rider.refresh_from_db()
+    except Exception:  # noqa: BLE001
+        pass
+    return render(request, 'catalog/rider_detail.html', {
+        'rider': rider, 'top_results': (data or {}).get('top_results', []),
+        'page_title': rider.name,
+    })
 
 
 def team_detail(request, slug, year):
     team = get_object_or_404(Team, slug=slug, year=year)
-    return render(request, 'catalog/team_detail.html', {'team': team, 'page_title': str(team)})
+    if not team.detail_synced_at:
+        try:
+            services.sync_team(team)
+            team.refresh_from_db()
+        except Exception:  # noqa: BLE001
+            pass
+    roster = (Rider.objects.filter(memberships__team=team, memberships__year=year)
+              .order_by('name').distinct())
+    return render(request, 'catalog/team_detail.html', {
+        'team': team, 'roster': roster, 'page_title': str(team),
+    })

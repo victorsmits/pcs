@@ -1,9 +1,57 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="space-y-6">
 
-<h1 class="text-2xl font-bold">{{ rider.name }}</h1>
-<p class="num mt-1 text-sm text-slate-400">{{ rider.nationality|upper }}{% if rider.current_team %} · {{ rider.current_team.name }}{% endif %}</p>
-<div class="card card-pad mt-4 text-sm text-slate-400">Palmarès et historique : Phase 1.</div>
+  <div class="flex items-start gap-5">
+    {% if rider.photo_url %}
+    <img src="{{ rider.photo_url }}" alt="{{ rider.name }}" class="h-28 w-28 rounded-xl object-cover bg-ink-800" loading="lazy">
+    {% endif %}
+    <div>
+      <h1 class="text-2xl font-bold">{{ rider.name }}</h1>
+      <p class="num mt-1 text-sm text-slate-400">
+        {% if rider.nationality %}{{ rider.nationality|upper }}{% endif %}
+        {% if rider.current_team %} · <a href="{{ rider.current_team.get_absolute_url }}" class="text-brand-400 hover:text-brand-300">{{ rider.current_team.name }}</a>{% endif %}
+      </p>
+      <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+        {% if rider.birthdate %}<div><dt class="inline text-slate-500">Né le </dt><dd class="num inline">{{ rider.birthdate|date:"d/m/Y" }}</dd></div>{% endif %}
+        {% if rider.weight %}<div><dt class="inline text-slate-500">Poids </dt><dd class="num inline">{{ rider.weight }} kg</dd></div>{% endif %}
+        {% if rider.height %}<div><dt class="inline text-slate-500">Taille </dt><dd class="num inline">{{ rider.height }} m</dd></div>{% endif %}
+      </dl>
+    </div>
+  </div>
 
+  {% if rider.specialties %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Spécialités (points PCS)</h2>
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {% for k, v in rider.specialties.items %}
+      <div class="rounded-lg bg-ink-800 p-3 text-center">
+        <div class="num text-lg font-semibold text-white">{{ v }}</div>
+        <div class="text-xs capitalize text-slate-500">{{ k }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if top_results %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Derniers résultats</h2>
+    <table class="table-data">
+      <thead><tr><th>Date</th><th class="text-center">Rang</th><th>Course</th></tr></thead>
+      <tbody>
+        {% for r in top_results %}
+        <tr>
+          <td class="num text-slate-400">{{ r.date }}</td>
+          <td class="num text-center {% if r.rank == '1' %}text-accent-400{% endif %}">{{ r.rank|default:"—" }}</td>
+          <td>{{ r.race }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+</div>
 {% endblock %}
