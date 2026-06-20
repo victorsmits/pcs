@@ -1,3 +1,4 @@
+{% load l10n %}
 {% comment %}
 Profil d'altitude en SVG. Contexte attendu : `profile` (dict de build_profile_svg).
 Optionnel : `progress_pct` (0-100) pour la barre de progression live.
@@ -21,7 +22,7 @@ Optionnel : `progress_pct` (0-100) pour la barre de progression live.
             vector-effect="non-scaling-stroke" opacity="0.7"/>
     {% endfor %}
     {% if progress_pct %}
-      <line x1="{{ progress_pct }}%" y1="0" x2="{{ progress_pct }}%" y2="{{ profile.height }}"
+      <line x1="{{ progress_pct|unlocalize }}%" y1="0" x2="{{ progress_pct|unlocalize }}%" y2="{{ profile.height }}"
             stroke="#ef4444" stroke-width="2" vector-effect="non-scaling-stroke"/>
     {% endif %}
   </svg>

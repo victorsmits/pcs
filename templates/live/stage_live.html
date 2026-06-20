@@ -1,9 +1,142 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block content %}
+<div x-data="liveStage()" x-init="init()" class="space-y-5">
 
-<a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
-<h1 class="text-2xl font-bold mt-2 flex items-center gap-2"><span class="live-dot animate-pulse"></span> Live — Étape {{ stage.number }}</h1>
-<div class="card card-pad mt-4 text-sm text-slate-400">Page live réactive (profil + progression + timeline) : Phase 3.</div>
+  {# En-tête #}
+  <div>
+    <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}"
+       class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
+    <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h1 class="flex items-center gap-3 text-2xl font-bold">
+          Étape {{ stage.number }}
+          <span class="badge-live" x-show="d.race_status==='racing'"><span class="live-dot animate-pulse"></span> LIVE</span>
+          <span class="badge-done" x-show="d.finished">Terminée</span>
+          <span class="badge-soon" x-show="d.race_status==='preview'">À venir</span>
+        </h1>
+        <p class="num mt-1 text-sm text-slate-400">
+          {{ stage.departure }} → {{ stage.arrival }}{% if stage.distance %} · {{ stage.distance }} km{% endif %}
+        </p>
+      </div>
+      <div class="num text-right text-xs text-slate-500" x-show="d.updated_at">
+        MAJ <span x-text="updatedAgo"></span>
+      </div>
+    </div>
+  </div>
 
+  {# Stats live #}
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="card card-pad"><div class="text-xs text-slate-500">Km parcourus</div>
+      <div class="num text-xl font-semibold text-white" x-text="fmt(d.km_done)"></div></div>
+    <div class="card card-pad"><div class="text-xs text-slate-500">Km restants</div>
+      <div class="num text-xl font-semibold text-white" x-text="fmt(d.km_to_go)"></div></div>
+    <div class="card card-pad"><div class="text-xs text-slate-500">Vitesse moy.</div>
+      <div class="num text-xl font-semibold text-white"><span x-text="fmt(d.avg_speed)"></span> <span class="text-sm text-slate-500">km/h</span></div></div>
+    <div class="card card-pad"><div class="text-xs text-slate-500">Progression</div>
+      <div class="num text-xl font-semibold text-white"><span x-text="Math.round(d.perc||0)"></span>%</div></div>
+  </div>
+
+  {# Profil + progression #}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Parcours</h2>
+    <div class="relative">
+      {% include 'components/profile_svg.html' with profile=profile image_url=stage.profile_image_url %}
+
+      {% if profile %}
+      <div class="pointer-events-none absolute inset-0">
+        {% for c in climbs %}
+        <div class="absolute top-0 h-full" style="left: {{ c.x|unlocalize }}%;">
+          <div class="h-full w-px bg-accent-500/40"></div>
+          <div class="absolute -top-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] text-accent-400">
+            {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        <div class="absolute top-0 h-full transition-all duration-700"
+             :style="`left: ${d.perc||0}%`" x-show="d.perc">
+          <div class="h-full w-0.5 bg-live-500"></div>
+          <div class="absolute -bottom-1 -translate-x-1/2 h-3 w-3 rounded-full bg-live-500 ring-2 ring-ink-900"></div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid gap-5 lg:grid-cols-2">
+    {# Situation #}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Situation</h2>
+      <div class="space-y-2">
+        <template x-for="g in d.groups" :key="g.label">
+          <div class="rounded-lg border border-ink-700/70 bg-ink-800 p-3">
+            <div class="flex items-center justify-between">
+              <span class="font-medium text-white" x-text="g.label"></span>
+              <span class="num text-sm text-accent-400" x-text="g.gap"></span>
+            </div>
+            <div class="num mt-1 text-xs text-slate-500"><span x-text="g.rider_count"></span> coureur(s)</div>
+            <div class="mt-1 text-xs text-slate-400" x-show="g.riders && g.riders.length"
+                 x-text="g.riders.map(r=>r.name).slice(0,8).join(', ')"></div>
+          </div>
+        </template>
+        <p class="text-sm text-slate-500" x-show="!d.groups || !d.groups.length">Pas encore de situation.</p>
+      </div>
+    </div>
+
+    {# Timeline #}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Timeline</h2>
+      <ol class="space-y-3">
+        <template x-for="e in d.events" :key="e.seqnr">
+          <li class="flex gap-3">
+            <span class="num mt-0.5 inline-flex h-6 min-w-[2rem] items-center justify-center rounded bg-ink-700 px-1.5 text-xs text-slate-300" x-text="e.marker"></span>
+            <span class="text-sm text-slate-300" x-text="e.text"></span>
+          </li>
+        </template>
+        <p class="text-sm text-slate-500" x-show="!d.events || !d.events.length">Pas encore d'événements.</p>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<script>{% localize off %}
+function liveStage() {
+  return {
+    DATA_URL: "{% url 'live_api:stage_live_data' slug=race.slug year=race.year number=stage.number %}",
+    POLL_MS: 15000,
+    d: {
+      race_status: "{{ session.race_status|default:'unknown' }}",
+      finished: {{ session.finished|yesno:'true,false' }},
+      km_done: {{ session.km_done|default:'null' }},
+      km_to_go: {{ session.km_to_go|default:'null' }},
+      avg_speed: {{ session.avg_speed|default:'null' }},
+      perc: {{ session.perc|default:'null' }},
+      groups: [], events: [],
+      updated_at: {% if session.last_polled_at %}"{{ session.last_polled_at|date:'c' }}"{% else %}null{% endif %},
+    },
+    updatedAgo: "",
+    timer: null,
+    fmt(v) { return (v===null||v===undefined) ? '—' : (Math.round(v*10)/10); },
+    async refresh() {
+      try {
+        const r = await fetch(this.DATA_URL, {headers: {'X-Requested-With':'XMLHttpRequest'}});
+        if (!r.ok) return;
+        this.d = await r.json();
+        this.tick();
+      } catch (e) {}
+    },
+    tick() {
+      if (!this.d.updated_at) { this.updatedAgo = ""; return; }
+      const s = Math.max(0, Math.round((Date.now() - new Date(this.d.updated_at)) / 1000));
+      this.updatedAgo = s < 60 ? `${s}s` : `${Math.floor(s/60)}min`;
+    },
+    init() {
+      this.refresh();
+      this.timer = setInterval(() => this.refresh(), this.POLL_MS);
+      setInterval(() => this.tick(), 1000);
+    },
+  };
+}
+{% endlocalize %}</script>
 {% endblock %}
