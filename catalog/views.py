@@ -46,11 +46,19 @@ def team_list(request):
 
 
 def rankings(request):
-    kind = request.GET.get('kind', 'pcs')
-    year = int(request.GET.get('year', date.today().year))
-    ranking = Ranking.objects.filter(kind=kind, year=year).select_related('rider', 'team').order_by('rank')[:100]
+    gender = request.GET.get('g', 'me')
+    if gender not in ('me', 'we'):
+        gender = 'me'
+    year = date.today().year
+    if not Ranking.objects.filter(kind=Ranking.Kind.PCS, year=year, gender=gender).exists():
+        try:
+            services.sync_pcs_ranking(year, gender)
+        except Exception:  # noqa: BLE001
+            pass
+    ranking = (Ranking.objects.filter(kind=Ranking.Kind.PCS, year=year, gender=gender)
+               .select_related('rider', 'rider__current_team').order_by('rank')[:100])
     return render(request, 'catalog/rankings.html', {
-        'ranking': ranking, 'kind': kind, 'year': year, 'page_title': 'Classements',
+        'ranking': ranking, 'gender': gender, 'year': year, 'page_title': 'Classement PCS',
     })
 
 

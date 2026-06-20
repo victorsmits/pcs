@@ -311,6 +311,7 @@ class Ranking(models.Model):
         TEAM = 'team', 'Équipes'
 
     kind = models.CharField(max_length=10, choices=Kind.choices)
+    gender = models.CharField(max_length=2, default='me')  # me / we
     year = models.IntegerField()
     rider = models.ForeignKey(Rider, on_delete=models.CASCADE, null=True, blank=True, related_name='rankings')
     team = models.ForeignKey(Team, on_delete=models.CASCADE, null=True, blank=True, related_name='rankings')

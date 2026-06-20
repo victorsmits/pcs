@@ -1,15 +1,27 @@
 {% extends 'base.html' %}
 
 {% block content %}
+<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="text-2xl font-bold">Classement PCS <span class="num text-lg text-slate-500">{{ year }}</span></h1>
+  <div class="flex gap-1 rounded-lg bg-ink-800 p-1 text-sm">
+    <a href="?g=me" class="rounded px-3 py-1 {% if gender == 'me' %}bg-brand-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">Hommes</a>
+    <a href="?g=we" class="rounded px-3 py-1 {% if gender == 'we' %}bg-brand-600 text-white{% else %}text-slate-400 hover:text-white{% endif %}">Femmes</a>
+  </div>
+</div>
 
-<h1 class="text-2xl font-bold mb-4">Classements</h1>
 <table class="table-data card">
-  <thead><tr><th>#</th><th>Nom</th><th>Points</th></tr></thead>
+  <thead><tr><th class="w-12">#</th><th>Coureur</th><th class="hidden sm:table-cell">Équipe</th><th class="text-right">Points</th></tr></thead>
   <tbody>
-  {% for row in ranking %}
-    <tr><td class="num">{{ row.rank }}</td><td>{{ row.rider|default:row.team }}</td><td class="num">{{ row.points }}</td></tr>
-  {% empty %}<tr><td colspan="3" class="text-slate-400">Aucun classement synchronisé.</td></tr>{% endfor %}
+    {% for row in ranking %}
+    <tr>
+      <td class="num text-slate-400">{{ row.rank }}</td>
+      <td><a href="{{ row.rider.get_absolute_url }}" class="hover:text-white">{{ row.rider.name }}</a></td>
+      <td class="hidden text-slate-400 sm:table-cell">{% if row.rider.current_team %}{{ row.rider.current_team.name }}{% endif %}</td>
+      <td class="num text-right text-white">{{ row.points }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" class="text-slate-500">Classement non disponible.</td></tr>
+    {% endfor %}
   </tbody>
 </table>
-
 {% endblock %}

@@ -317,6 +317,32 @@ JERSEY_LABELS = [
 ]
 
 
+def sync_pcs_ranking(year, gender='me', force=False):
+    """Synchronise le classement PCS individuel (me=hommes, we=femmes)."""
+    from core.parsers.ranking import parse_pcs_ranking
+    from catalog.models import Ranking
+    url = f'{pcs_client.PCS_BASE_URL}/rankings/{gender}/individual'
+    soup = pcs_client.get_soup(url, cache_ttl=6 * 3600, force=force)
+    if not soup:
+        return 0
+    rows = parse_pcs_ranking(soup)
+    saved = 0
+    for r in rows:
+        rider = get_or_create_rider(r['rider_slug'], r['rider_name'])
+        if not rider:
+            continue
+        if r['team_slug'] and not rider.current_team_id:
+            rider.current_team = get_or_create_team(r['team_slug'], r['team_year'], r['team_name'])
+            rider.save(update_fields=['current_team'])
+        Ranking.objects.update_or_create(
+            kind=Ranking.Kind.PCS, year=year, gender=gender, rider=rider,
+            defaults={'rank': r['rank'], 'points': r['points'], 'previous_rank': r['previous_rank']},
+        )
+        saved += 1
+    _log('ranking', f'pcs/{gender}/{year}', SyncLog.Status.OK, f'{saved} lignes')
+    return saved
+
+
 def get_jersey_wearers(race):
     """Porteurs de maillots après la dernière étape disputée, labellisés par ordre
     conventionnel (Leader, Points, Montagne, Jeunes…). Renvoie [{rider,label,color}]."""
