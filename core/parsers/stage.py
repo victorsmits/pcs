@@ -136,6 +136,29 @@ def parse_stage_list(soup, year=None):
     return [stages[k] for k in sorted(stages)]
 
 
+def parse_jersey_wearers(soup):
+    """Liste des porteurs de maillots après une étape (1er = leader général).
+
+    Renvoie [{'name', 'slug'}] dans l'ordre PCS (général, points, montagne, jeunes…).
+    """
+    from core.parsers.common import slug_from_href
+    block = None
+    for el in soup.find_all('div'):
+        txt = el.get_text(' ', strip=True)
+        if txt.startswith('Jersey wearers') and len(txt) < 200:
+            block = el
+            break
+    if not block:
+        return []
+    seen, out = set(), []
+    for a in block.find_all('a', href=re.compile(r'rider/')):
+        slug = slug_from_href(a.get('href'), 'rider')
+        if slug and slug not in seen:
+            seen.add(slug)
+            out.append({'name': a.get_text(' ', strip=True), 'slug': slug})
+    return out
+
+
 def parse_stage_winners(soup):
     """Table « Stage winners » → {numéro: {'name', 'slug'}}."""
     from core.parsers.common import slug_from_href

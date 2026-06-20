@@ -33,6 +33,21 @@
     </dl>
   </div>
 
+  {# Porteurs de maillots (dernière étape disputée) #}
+  {% if jersey_riders %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Porteurs de maillots</h2>
+    <div class="flex flex-wrap gap-3">
+      {% for rider in jersey_riders %}
+      <a href="{{ rider.get_absolute_url }}" class="flex items-center gap-2 rounded-lg bg-ink-800 px-3 py-2 hover:bg-ink-700">
+        {% if forloop.first %}<span class="h-3 w-3 rounded-full bg-accent-400" title="Leader"></span>{% endif %}
+        <span class="text-sm">{{ rider.name }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {# Classement général / résultat #}
   {% if gc %}
   <div class="card card-pad">

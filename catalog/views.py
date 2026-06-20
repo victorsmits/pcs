@@ -77,6 +77,14 @@ def race_detail(request, slug, year):
         gc = list(Result.objects.filter(race=race, classification=ClassificationType.GC)
                   .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
         gc_provisional = is_ongoing and bool(gc) and not any(r.time_gap for r in gc)
+
+    # Porteurs de maillots (depuis la dernière étape disputée)
+    jersey_riders = []
+    if race.is_stage_race and (gc or stages):
+        try:
+            jersey_riders = services.get_jersey_wearers(race)
+        except Exception:  # noqa: BLE001
+            pass
     else:
         if not Result.objects.filter(race=race, stage__isnull=True).exists():
             try:
@@ -88,7 +96,8 @@ def race_detail(request, slug, year):
 
     return render(request, 'catalog/race_detail.html', {
         'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday,
-        'gc_provisional': gc_provisional, 'ongoing_today': is_ongoing, 'page_title': str(race),
+        'gc_provisional': gc_provisional, 'ongoing_today': is_ongoing,
+        'jersey_riders': jersey_riders, 'page_title': str(race),
     })
 
 

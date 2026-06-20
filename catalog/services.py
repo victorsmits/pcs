@@ -278,6 +278,24 @@ def sync_team(team, force=False):
     return data
 
 
+def get_jersey_wearers(race):
+    """Porteurs de maillots après la dernière étape disputée (1er = leader général)."""
+    from datetime import date as _date
+    from core.parsers.stage import parse_jersey_wearers
+    candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number')) \
+        or list(race.stages.order_by('-number'))
+    for st in candidates:
+        url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/stage-{st.number}'
+        soup = pcs_client.get_soup(url, cache_ttl=300)
+        if not soup:
+            continue
+        wearers = parse_jersey_wearers(soup)
+        if wearers:
+            riders = [get_or_create_rider(w['slug'], w['name']) for w in wearers]
+            return [r for r in riders if r]
+    return []
+
+
 def sync_oneday_result(race, force=False):
     """Récupère le résultat d'une course d'un jour (classement unique, stage=None)."""
     for suffix in ('result', ''):
@@ -294,6 +312,29 @@ def sync_oneday_result(race, force=False):
                  SyncLog.Status.OK if saved else SyncLog.Status.EMPTY, f'{saved} résultats')
             return saved
     return 0
+
+
+_CLASSIF_URLS = {
+    ClassificationType.POINTS: 'points',
+    ClassificationType.KOM: 'kom',
+    ClassificationType.YOUTH: 'youth',
+}
+
+
+def sync_classifications(race, force=False):
+    """Récupère points / montagne / jeunes (server-side, courses terminées)."""
+    total = 0
+    for classif, slug in _CLASSIF_URLS.items():
+        url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/{slug}'
+        soup = pcs_client.get_soup(url, cache_ttl=300, force=force)
+        if not soup:
+            continue
+        rows = parse_results_table(soup)
+        if rows:
+            total += _save_results(race, rows, classif)
+    if total:
+        _log('results', f'{race.slug}/{race.year}/classifs', SyncLog.Status.OK, f'{total} lignes')
+    return total
 
 
 def sync_race_detail(race, force=False):
