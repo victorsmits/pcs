@@ -26,6 +26,31 @@ def _maybe_refresh(session):
     return session
 
 
+def _upcoming_keypoints(session):
+    """Points clés (cols/sprints) encore à venir, avec distance restante."""
+    data = session.raw_data or {}
+    km_done = session.km_done or 0
+    out = []
+    for kp in data.get('keypoints', []) or []:
+        km = kp.get('km')
+        if km is None:
+            continue
+        to_go = round(km - km_done, 1)
+        if to_go < -1:
+            continue  # déjà passé
+        out.append({
+            'name': kp.get('title', ''),
+            'km': km,
+            'to_go': to_go,
+            'category': str(kp.get('category') or ''),
+            'length': kp.get('lengte') or None,
+            'avg_grad': kp.get('avg_perc') or None,
+            'passed': to_go < 0,
+        })
+    out.sort(key=lambda k: k['km'])
+    return out[:8]
+
+
 def _serialize(session):
     return {
         'available': True,
@@ -46,6 +71,7 @@ def _serialize(session):
             {'seqnr': e.seqnr, 'marker': e.marker, 'text': e.text}
             for e in session.events.all()[:40]
         ],
+        'keypoints': _upcoming_keypoints(session),
         'updated_at': session.last_polled_at.isoformat() if session.last_polled_at else None,
     }
 
