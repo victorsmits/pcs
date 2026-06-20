@@ -7,7 +7,7 @@ from django.utils import timezone
 from core import pcs_client
 from core.models import SyncLog
 from core.parsers.calendar import parse_calendar
-from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_images
+from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_images, parse_stage_winners
 from core.parsers.profile import extract_elevation_points
 from core.parsers.live import parse_live_data, keypoints_from_data
 from catalog.models import Race, Stage, Climb, Rider, Category, StageType
@@ -114,19 +114,26 @@ def sync_race_detail(race, force=False):
         _log('race', f'{race.slug}/{race.year}', SyncLog.Status.ERROR, 'fetch échoué')
         return race
 
-    stages = parse_stage_list(soup)
+    stages = parse_stage_list(soup, race.year)
+    winners = parse_stage_winners(soup)
     for s in stages:
-        Stage.objects.update_or_create(
-            race=race, number=s['number'],
-            defaults={'departure': s['departure'][:120], 'arrival': s['arrival'][:120]},
-        )
+        defaults = {'departure': s['departure'][:120], 'arrival': s['arrival'][:120]}
+        if s.get('date'):
+            defaults['date'] = s['date']
+        if s.get('distance'):
+            defaults['distance'] = s['distance']
+        w = winners.get(s['number'])
+        if w:
+            defaults['winner'] = get_or_create_rider(w['slug'], w['name'])
+        Stage.objects.update_or_create(race=race, number=s['number'], defaults=defaults)
+
     if stages and not race.is_stage_race:
         race.is_stage_race = True
 
     race.detail_synced_at = timezone.now()
     race.save(update_fields=['is_stage_race', 'detail_synced_at'])
     _log('race', f'{race.slug}/{race.year}', SyncLog.Status.OK,
-         f'{len(stages)} étapes', int((time.monotonic() - t0) * 1000))
+         f'{len(stages)} étapes, {len(winners)} vainqueurs', int((time.monotonic() - t0) * 1000))
     return race
 
 
