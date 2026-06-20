@@ -1,5 +1,21 @@
 version: '3.9'
 
+# Production : web (gunicorn) + worker (Celery) + beat (planif. admin) + db + redis.
+
+x-app-env: &app-env
+  DEBUG: ${DEBUG}
+  SECRET_KEY: ${SECRET_KEY}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+  DB_HOST: pcs_postgres
+  DB_NAME: pcs_prod
+  DB_USER: pcs_user
+  DB_PASSWORD: ${POSTGRES_PASSWORD}
+  DB_PORT: "5432"
+  REDIS_URL: redis://pcs_redis:6379/0
+  CELERY_BROKER_URL: redis://pcs_redis:6379/0
+  CURRENT_SEASON: ${CURRENT_SEASON:-2026}
+  HOME: /tmp
+
 services:
   db:
     image: postgres:16-alpine
@@ -11,44 +27,64 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pcs_pgdata:/var/lib/postgresql/data
-    networks:
-      - pcs_network
+    networks: [pcs_network]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pcs_user -d pcs_prod"]
       interval: 5s
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: pcs_redis
+    restart: unless-stopped
+    networks: [pcs_network]
+    volumes:
+      - pcs_redisdata:/data
+
   web:
-    image: ${DOCKER_HUB_USERNAME}/cyclostats:latest
+    image: ${DOCKER_HUB_USERNAME}/pcs-live:latest
     container_name: pcs_web
     restart: unless-stopped
-    environment:
-      - DEBUG=${DEBUG}
-      - SECRET_KEY=${SECRET_KEY}
-      - DB_HOST=pcs_postgres
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_NAME=pcs_prod
-      - DB_USER=pcs_user
-      - DB_PORT=5432
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
-      - HOME=/tmp
+    environment: *app-env
     depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - pcs_network
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+    networks: [pcs_network]
     ports:
       - "8800:8000"
     volumes:
       - static_volume:/app/staticfiles
     command: >
       sh -c "python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 --worker-tmp-dir /tmp pcs_project.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-tmp-dir /tmp pcs_project.wsgi:application"
+
+  worker:
+    image: ${DOCKER_HUB_USERNAME}/pcs-live:latest
+    container_name: pcs_worker
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+    networks: [pcs_network]
+    command: celery -A pcs_project worker --loglevel=info --concurrency=2
+
+  beat:
+    image: ${DOCKER_HUB_USERNAME}/pcs-live:latest
+    container_name: pcs_beat
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+    networks: [pcs_network]
+    command: celery -A pcs_project beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
 
 networks:
   pcs_network:
 
 volumes:
   pcs_pgdata:
+  pcs_redisdata:
   static_volume:

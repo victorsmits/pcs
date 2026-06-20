@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-4">Classements</h1>
+<table class="table-data card">
+  <thead><tr><th>#</th><th>Nom</th><th>Points</th></tr></thead>
+  <tbody>
+  {% for row in ranking %}
+    <tr><td class="num">{{ row.rank }}</td><td>{{ row.rider|default:row.team }}</td><td class="num">{{ row.points }}</td></tr>
+  {% empty %}<tr><td colspan="3" class="text-slate-400">Aucun classement synchronisé.</td></tr>{% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

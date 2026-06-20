@@ -59,6 +59,9 @@ coverage.xml
 *.py,cover
 .hypothesis/
 
+# ─── Node / Tailwind ──────────────────────────────────────────
+node_modules/
+
 # ─── Editors / IDEs ───────────────────────────────────────────
 .idea/
 .vscode/
@@ -99,3 +102,5 @@ celerybeat.pid
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+.claude

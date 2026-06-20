@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="text-2xl font-bold">{{ rider.name }}</h1>
+<p class="num mt-1 text-sm text-slate-400">{{ rider.nationality|upper }}{% if rider.current_team %} · {{ rider.current_team.name }}{% endif %}</p>
+<div class="card card-pad mt-4 text-sm text-slate-400">Palmarès et historique : Phase 1.</div>
+
+{% endblock %}

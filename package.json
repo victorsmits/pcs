@@ -1,0 +1,13 @@
+{
+  "name": "pcs-live",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PCS Live — suivi de course cycliste en direct",
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/src/input.css -o ./static/css/app.css --minify",
+    "watch:css": "tailwindcss -i ./static/src/input.css -o ./static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.17"
+  }
+}

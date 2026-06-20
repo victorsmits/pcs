@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
+<h1 class="text-2xl font-bold mt-2 flex items-center gap-2"><span class="live-dot animate-pulse"></span> Live — Étape {{ stage.number }}</h1>
+<div class="card card-pad mt-4 text-sm text-slate-400">Page live réactive (profil + progression + timeline) : Phase 3.</div>
+
+{% endblock %}

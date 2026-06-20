@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
+<h1 class="text-2xl font-bold mt-2">Étape {{ stage.number }}</h1>
+<p class="num mt-1 text-sm text-slate-400">{{ stage.departure }} → {{ stage.arrival }}{% if stage.distance %} · {{ stage.distance }} km{% endif %}</p>
+<div class="card card-pad mt-4 text-sm text-slate-400">Profil et résultats : Phase 1 / Phase 2.</div>
+
+{% endblock %}

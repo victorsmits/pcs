@@ -1,12 +1,9 @@
-from datetime import date
+from django.conf import settings
 
 
-def global_context(request):
-    current_year = date.today().year
+def site_context(request):
+    """Variables disponibles dans tous les templates."""
     return {
-        'current_year': current_year,
-        'years_range': list(range(current_year, 1999, -1)),
-        'nav_years': list(range(current_year, current_year - 5, -1)),
-        'app_name': 'CycloStats',
-        'app_tagline': 'La référence du cyclisme professionnel',
+        'SITE_NAME': 'PCS Live',
+        'CURRENT_SEASON': settings.CURRENT_SEASON,
     }
