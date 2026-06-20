@@ -493,6 +493,16 @@ def sync_stage_detail(stage, force=False):
                         location_url=kp['url'][:200],
                     )
 
+    # Repli : si pas de profil vectoriel (étape future), on reconstruit la
+    # silhouette d'altitude depuis l'image de profil PCS (analyse de pixels).
+    if not stage.elevation_points and stage.profile_image_url:
+        from core.profile_from_image import extract_elevation_from_image
+        img = pcs_client.fetch_bytes(stage.profile_image_url, cache_ttl=7 * 86400, force=force)
+        if img:
+            pts = extract_elevation_from_image(img)
+            if pts:
+                stage.elevation_points = pts
+
     stage.detail_synced_at = timezone.now()
     stage.save()
     _log('stage', f'{stage.race.slug}/{stage.race.year}/{stage.number}', SyncLog.Status.OK,

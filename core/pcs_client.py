@@ -121,6 +121,28 @@ def get_json(url, *, cache_ttl=10, referer=None, force=False):
         return None
 
 
+def fetch_bytes(url, *, cache_ttl=86400, force=False):
+    """Récupère le contenu binaire d'une URL (images), avec cache."""
+    import base64
+    cache_key = f'pcs_bytes::{url}'
+    if not force and cache_ttl:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return base64.b64decode(cached)
+    session = _get_session()
+    try:
+        time.sleep(settings.PCS_REQUEST_DELAY)
+        resp = session.get(url, timeout=25)
+        resp.raise_for_status()
+        content = resp.content
+        if cache_ttl:
+            cache.set(cache_key, base64.b64encode(content).decode(), cache_ttl)
+        return content
+    except Exception as exc:  # noqa: BLE001
+        logger.warning('Échec fetch_bytes %s: %s', url, exc)
+        return None
+
+
 def abs_url(path):
     """Transforme un chemin relatif PCS en URL absolue."""
     if not path:
