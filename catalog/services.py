@@ -368,6 +368,22 @@ def get_jersey_wearers(race):
     return []
 
 
+def backfill_profile_from_image(stage):
+    """Reconstruit elevation_points depuis l'image JPG (étape déjà synchro sans profil)."""
+    if stage.elevation_points or not stage.profile_image_url:
+        return False
+    from core.profile_from_image import extract_elevation_from_image
+    img = pcs_client.fetch_bytes(stage.profile_image_url, cache_ttl=7 * 86400)
+    if not img:
+        return False
+    pts = extract_elevation_from_image(img)
+    if pts:
+        stage.elevation_points = pts
+        stage.save(update_fields=['elevation_points'])
+        return True
+    return False
+
+
 def sync_oneday_result(race, force=False):
     """Récupère le résultat d'une course d'un jour (classement unique, stage=None)."""
     for suffix in ('result', ''):

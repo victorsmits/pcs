@@ -219,6 +219,12 @@ def stage_detail(request, slug, year, number):
             services.sync_stage_detail(stage)
         except Exception:  # noqa: BLE001
             pass
+    # Étape déjà synchronisée mais sans profil vectoriel → on reconstruit depuis l'image
+    elif not stage.elevation_points and stage.profile_image_url:
+        try:
+            services.backfill_profile_from_image(stage)
+        except Exception:  # noqa: BLE001
+            pass
     climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
     profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
                                 stage.max_elevation, stage.distance, climbs=climbs)
