@@ -26,6 +26,24 @@
     {% include 'components/profile_svg.html' with profile=profile image_url=stage.profile_image_url %}
   </div>
 
+  {# Carte & arrivée #}
+  {% if stage.map_image_url or stage.finish_image_url %}
+  <div class="grid gap-5 lg:grid-cols-2">
+    {% if stage.map_image_url %}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Tracé</h2>
+      <img src="{{ stage.map_image_url }}" alt="Tracé de l'étape" class="w-full rounded-lg" loading="lazy">
+    </div>
+    {% endif %}
+    {% if stage.finish_image_url %}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Derniers kilomètres</h2>
+      <img src="{{ stage.finish_image_url }}" alt="Profil d'arrivée" class="mx-auto max-h-96 rounded-lg" loading="lazy">
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {# Infos générales #}
   <div class="card card-pad">
     <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Informations</h2>
@@ -34,10 +52,32 @@
       {% if stage.vertical_meters %}<div><dt class="text-slate-500">Dénivelé +</dt><dd class="num">{{ stage.vertical_meters }} m</dd></div>{% endif %}
       {% if stage.profile_score %}<div><dt class="text-slate-500">ProfileScore</dt><dd class="num">{{ stage.profile_score }}</dd></div>{% endif %}
       {% if stage.gradient_final %}<div><dt class="text-slate-500">Pente derniers km</dt><dd class="num">{{ stage.gradient_final }}%</dd></div>{% endif %}
+      {% if stage.min_elevation %}<div><dt class="text-slate-500">Altitude min/max</dt><dd class="num">{{ stage.min_elevation }}–{{ stage.max_elevation }} m</dd></div>{% endif %}
       <div><dt class="text-slate-500">Départ</dt><dd>{{ stage.departure|default:"—" }}</dd></div>
       <div><dt class="text-slate-500">Arrivée</dt><dd>{{ stage.arrival|default:"—" }}</dd></div>
     </dl>
   </div>
+
+  {# Cols & points clés #}
+  {% if climbs %}
+  <div class="card card-pad">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Cols & sprints</h2>
+    <table class="table-data">
+      <thead><tr><th>Km</th><th>Nom</th><th>Cat.</th><th>Long.</th><th>Pente</th></tr></thead>
+      <tbody>
+        {% for c in climbs %}
+        <tr>
+          <td class="num">{{ c.km|default:"—" }}</td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.category|default:"—" }}</td>
+          <td class="num">{% if c.length %}{{ c.length }} km{% else %}—{% endif %}</td>
+          <td class="num">{% if c.avg_grad %}{{ c.avg_grad }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 
 </div>
 {% endblock %}

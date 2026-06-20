@@ -1,17 +1,27 @@
-"""Construit les données SVG du profil d'étape à partir des points d'altitude."""
+"""Construit les données SVG du profil d'étape (silhouette + échelle)."""
 from core.parsers.profile import points_to_svg
 
 VIEW_W = 1000
 VIEW_H = 200
 
 
-def build_profile_svg(elevation_points, climbs=None):
+def _nice_step(span, target_ticks=5):
+    """Renvoie un pas « rond » pour ~target_ticks graduations sur une étendue donnée."""
+    if span <= 0:
+        return 1
+    raw = span / target_ticks
+    import math
+    mag = 10 ** math.floor(math.log10(raw))
+    for mult in (1, 2, 2.5, 5, 10):
+        if raw <= mult * mag:
+            return mult * mag
+    return 10 * mag
+
+
+def build_profile_svg(elevation_points, min_ele=None, max_ele=None, max_km=None, climbs=None):
     """Renvoie un dict prêt pour le template (ou None si pas de données).
 
-    {
-      'width', 'height', 'polyline', 'area',
-      'climbs': [{'x', 'name', 'category'}…]
-    }
+    Inclut polyline/area + graduations d'altitude (y_ticks) et de distance (x_ticks).
     """
     if not elevation_points:
         return None
@@ -19,14 +29,30 @@ def build_profile_svg(elevation_points, climbs=None):
     if not polyline:
         return None
 
+    # Graduations d'altitude (h relatif : 0 = min_ele en bas, 100 = max_ele en haut)
+    y_ticks = []
+    if min_ele is not None and max_ele is not None and max_ele > min_ele:
+        for frac in (0, 0.25, 0.5, 0.75, 1.0):
+            elev = min_ele + frac * (max_ele - min_ele)
+            y_ticks.append({'top_pct': round((1 - frac) * 100, 2), 'label': f'{round(elev)} m'})
+
+    # Graduations de distance
+    x_ticks = []
+    if max_km:
+        step = _nice_step(max_km, 5)
+        km = 0.0
+        while km <= max_km + 0.01:
+            x_ticks.append({'left_pct': round(km / max_km * 100, 2),
+                            'label': f'{int(km)}'})
+            km += step
+
     climb_markers = []
     for c in (climbs or []):
         km = c.get('km')
-        max_km = c.get('max_km')
         if km is None or not max_km:
             continue
         climb_markers.append({
-            'x': round(km / max_km * VIEW_W, 1),
+            'left_pct': round(km / max_km * 100, 1),
             'name': c.get('name', ''),
             'category': c.get('category', ''),
         })
@@ -36,5 +62,8 @@ def build_profile_svg(elevation_points, climbs=None):
         'height': VIEW_H,
         'polyline': polyline,
         'area': area,
+        'y_ticks': y_ticks,
+        'x_ticks': x_ticks,
         'climbs': climb_markers,
+        'max_km': max_km,
     }

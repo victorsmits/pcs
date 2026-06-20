@@ -40,29 +40,27 @@
 
   {# Profil + progression #}
   <div class="card card-pad">
-    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Parcours</h2>
-    <div class="relative">
-      {% include 'components/profile_svg.html' with profile=profile image_url=stage.profile_image_url %}
-
-      {% if profile %}
-      <div class="pointer-events-none absolute inset-0">
-        {% for c in climbs %}
-        <div class="absolute top-0 h-full" style="left: {{ c.x|unlocalize }}%;">
-          <div class="h-full w-px bg-accent-500/40"></div>
-          <div class="absolute -top-0.5 -translate-x-1/2 whitespace-nowrap text-[10px] text-accent-400">
-            {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
-          </div>
-        </div>
-        {% endfor %}
-        <div class="absolute top-0 h-full transition-all duration-700"
-             :style="`left: ${d.perc||0}%`" x-show="d.perc">
-          <div class="h-full w-0.5 bg-live-500"></div>
-          <div class="absolute -bottom-1 -translate-x-1/2 h-3 w-3 rounded-full bg-live-500 ring-2 ring-ink-900"></div>
-        </div>
-      </div>
-      {% endif %}
-    </div>
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Profil</h2>
+    {% include 'components/profile_svg.html' with profile=profile image_url=stage.profile_image_url live=True %}
   </div>
+
+  {# Carte & arrivée #}
+  {% if stage.map_image_url or stage.finish_image_url %}
+  <div class="grid gap-5 lg:grid-cols-2">
+    {% if stage.map_image_url %}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Tracé</h2>
+      <img src="{{ stage.map_image_url }}" alt="Tracé de l'étape" class="w-full rounded-lg" loading="lazy">
+    </div>
+    {% endif %}
+    {% if stage.finish_image_url %}
+    <div class="card card-pad">
+      <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Derniers kilomètres</h2>
+      <img src="{{ stage.finish_image_url }}" alt="Profil d'arrivée" class="mx-auto max-h-96 rounded-lg" loading="lazy">
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <div class="grid gap-5 lg:grid-cols-2">
     {# Situation #}

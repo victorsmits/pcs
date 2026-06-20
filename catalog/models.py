@@ -191,7 +191,11 @@ class Stage(models.Model):
     profile_score = models.IntegerField(null=True, blank=True)
     vertical_meters = models.IntegerField(null=True, blank=True)
     gradient_final = models.FloatField(null=True, blank=True)
-    profile_image_url = models.URLField(blank=True)
+    profile_image_url = models.URLField(blank=True, max_length=300)
+    map_image_url = models.URLField(blank=True, max_length=300)
+    finish_image_url = models.URLField(blank=True, max_length=300)
+    min_elevation = models.IntegerField(null=True, blank=True)
+    max_elevation = models.IntegerField(null=True, blank=True)
     # Points d'altitude (x%, y%) extraits du clip-path PCS → régénération SVG
     elevation_points = models.JSONField(default=list, blank=True)
     winner = models.ForeignKey(

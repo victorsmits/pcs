@@ -55,6 +55,28 @@ def parse_stage_info(soup):
     return data
 
 
+def parse_stage_images(soup):
+    """Depuis la page /info/profiles d'une étape, extrait profil/carte/arrivée.
+
+    Renvoie {'profile_image_url', 'map_image_url', 'finish_image_url'} (URLs absolues).
+    """
+    base = 'https://www.procyclingstats.com'
+    out = {}
+    for img in soup.find_all('img', src=True):
+        src = img['src'].split('?')[0]
+        if 'images/profiles/' not in src:
+            continue
+        url = src if src.startswith('http') else f'{base}/{src.lstrip("/")}'
+        low = src.lower()
+        if '-map' in low and 'map_image_url' not in out:
+            out['map_image_url'] = url
+        elif '-finish' in low and 'finish_image_url' not in out:
+            out['finish_image_url'] = url
+        elif 'profile_image_url' not in out:
+            out['profile_image_url'] = url
+    return out
+
+
 _STAGE_LINK_RE = re.compile(r'/race/[^/]+/\d+/stage-(\d+)\b')
 
 

@@ -70,9 +70,12 @@ def stage_detail(request, slug, year, number):
             services.sync_stage_detail(stage)
         except Exception:  # noqa: BLE001
             pass
-    profile = build_profile_svg(stage.elevation_points)
+    climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
+    profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
+                                stage.max_elevation, stage.distance, climbs=climbs)
     return render(request, 'catalog/stage_detail.html', {
-        'stage': stage, 'race': stage.race, 'profile': profile, 'page_title': str(stage),
+        'stage': stage, 'race': stage.race, 'profile': profile,
+        'climbs': stage.climbs.all(), 'page_title': str(stage),
     })
 
 

@@ -7,9 +7,10 @@ from django.utils import timezone
 from core import pcs_client
 from core.models import SyncLog
 from core.parsers.calendar import parse_calendar
-from core.parsers.stage import parse_stage_info, parse_stage_list
+from core.parsers.stage import parse_stage_info, parse_stage_list, parse_stage_images
 from core.parsers.profile import extract_elevation_points
-from catalog.models import Race, Stage, Rider, Category, StageType
+from core.parsers.live import parse_live_data, keypoints_from_data
+from catalog.models import Race, Stage, Climb, Rider, Category, StageType
 
 logger = logging.getLogger('catalog')
 
@@ -144,12 +145,39 @@ def sync_stage_detail(stage, force=False):
             if value not in (None, ''):
                 setattr(stage, field, value)
 
-    # Profil d'altitude depuis la page live (polygone clip-path)
+    # Images (profil HD, carte/tracé, profil d'arrivée) depuis /info/profiles
+    img_soup = pcs_client.get_soup(base + '/info/profiles', cache_ttl=86400, force=force)
+    if img_soup:
+        for field, value in parse_stage_images(img_soup).items():
+            if value:
+                setattr(stage, field, value)
+
+    # Profil d'altitude + altitudes min/max depuis la page live (polygone clip-path)
     live_html = pcs_client.fetch_text(base + '/live', cache_ttl=1800, force=force)
     if live_html:
         points = extract_elevation_points(live_html)
         if points:
             stage.elevation_points = points
+        ldata = parse_live_data(live_html)
+        if ldata:
+            if ldata.get('min_ele') is not None:
+                stage.min_elevation = int(ldata['min_ele'])
+            if ldata.get('max_ele') is not None:
+                stage.max_elevation = int(ldata['max_ele'])
+            if not stage.distance and ldata.get('maxkm'):
+                stage.distance = ldata['maxkm']
+            # Cols / points clés
+            keypoints = keypoints_from_data(ldata)
+            if keypoints:
+                stage.climbs.all().delete()
+                for kp in keypoints:
+                    Climb.objects.create(
+                        stage=stage, name=kp['name'][:160], km=kp['km'],
+                        length=kp['length'], avg_grad=kp['avg_grad'],
+                        category=str(kp['category'])[:10],
+                        kind=Climb.Kind.CLIMB if kp['category'] else Climb.Kind.SPRINT,
+                        location_url=kp['url'][:200],
+                    )
 
     stage.detail_synced_at = timezone.now()
     stage.save()

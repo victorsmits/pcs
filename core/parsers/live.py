@@ -48,12 +48,12 @@ def keypoints_from_data(data):
     for kp in data.get('keypoints', []) or []:
         km = kp.get('km')
         out.append({
-            'name': kp.get('title', ''),
+            'name': kp.get('title') or '',
             'km': km,
             'length': kp.get('lengte') or None,
             'avg_grad': kp.get('avg_perc') or None,
             'category': str(kp.get('category') or ''),
-            'url': kp.get('url', ''),
+            'url': kp.get('url') or '',
             'x': round(km / max_km * 100, 2) if (km is not None and max_km) else None,
         })
     return out

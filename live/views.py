@@ -36,21 +36,12 @@ def stage_live(request, slug, year, number):
         except Exception:  # noqa: BLE001
             pass
 
-    profile = build_profile_svg(stage.elevation_points)
-    keypoints = (session.raw_data.get('keypoints') if session and session.raw_data else None) or []
-    max_km = session.max_km if session else (stage.distance or None)
-    climbs = []
-    for kp in keypoints:
-        km = kp.get('km')
-        if km is not None and max_km:
-            climbs.append({
-                'x': round(km / max_km * 100, 1),
-                'name': kp.get('title', ''),
-                'category': str(kp.get('category') or ''),
-            })
+    climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
+    max_km = (session.max_km if session and session.max_km else stage.distance)
+    profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
+                                stage.max_elevation, max_km, climbs=climbs)
 
     return render(request, 'live/stage_live.html', {
         'stage': stage, 'race': stage.race, 'session': session,
-        'profile': profile, 'climbs': climbs,
-        'page_title': f'Live — {stage}',
+        'profile': profile, 'page_title': f'Live — {stage}',
     })

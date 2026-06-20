@@ -1,34 +1,92 @@
 {% load l10n %}
 {% comment %}
-Profil d'altitude en SVG. Contexte attendu : `profile` (dict de build_profile_svg).
-Optionnel : `progress_pct` (0-100) pour la barre de progression live.
+Profil d'altitude SVG avec échelle. Contexte : `profile` (build_profile_svg).
+Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs` (via profile.climbs).
 {% endcomment %}
+{% localize off %}
 {% if profile %}
-<div class="relative w-full overflow-hidden rounded-lg bg-ink-800">
-  <svg viewBox="0 0 {{ profile.width }} {{ profile.height }}" preserveAspectRatio="none"
-       class="block h-40 w-full sm:h-48" role="img" aria-label="Profil d'altitude de l'étape">
-    <defs>
-      <linearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.45"/>
-        <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.04"/>
-      </linearGradient>
-    </defs>
-    <path d="{{ profile.area }}" fill="url(#profileFill)"/>
-    <polyline points="{{ profile.polyline }}" fill="none" stroke="#60a5fa"
-              stroke-width="2" vector-effect="non-scaling-stroke"/>
-    {% for c in profile.climbs %}
-      <line x1="{{ c.x }}" y1="0" x2="{{ c.x }}" y2="{{ profile.height }}"
-            stroke="#f59e0b" stroke-width="1" stroke-dasharray="3 3"
-            vector-effect="non-scaling-stroke" opacity="0.7"/>
+<div class="w-full">
+  <div class="flex">
+    {# Axe altitude (gauche) #}
+    <div class="relative w-12 shrink-0">
+      <div class="relative h-40 sm:h-48">
+        {% for t in profile.y_ticks %}
+        <div class="absolute right-1 -translate-y-1/2 text-[10px] text-slate-500 num"
+             style="top: {{ t.top_pct }}%;">{{ t.label }}</div>
+        {% endfor %}
+      </div>
+      <div class="h-5"></div>
+    </div>
+
+    {# Zone de tracé #}
+    <div class="relative flex-1">
+      <div class="relative h-40 overflow-hidden rounded-lg bg-ink-800 sm:h-48">
+        {# Lignes de grille horizontales #}
+        {% for t in profile.y_ticks %}
+        <div class="pointer-events-none absolute inset-x-0 border-t border-ink-700/50"
+             style="top: {{ t.top_pct }}%;"></div>
+        {% endfor %}
+
+        <svg viewBox="0 0 {{ profile.width }} {{ profile.height }}" preserveAspectRatio="none"
+             class="relative block h-full w-full" role="img" aria-label="Profil d'altitude">
+          <defs>
+            <linearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.45"/>
+              <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.04"/>
+            </linearGradient>
+          </defs>
+          <path d="{{ profile.area }}" fill="url(#profileFill)"/>
+          <polyline points="{{ profile.polyline }}" fill="none" stroke="#60a5fa"
+                    stroke-width="2" vector-effect="non-scaling-stroke"/>
+        </svg>
+
+        {# Marqueurs cols #}
+        {% for c in profile.climbs %}
+        <div class="pointer-events-none absolute top-0 h-full" style="left: {{ c.left_pct }}%;">
+          <div class="h-full w-px bg-accent-500/40"></div>
+        </div>
+        {% endfor %}
+
+        {# Barre de progression statique (si fournie) #}
+        {% if progress_pct %}
+        <div class="pointer-events-none absolute top-0 h-full" style="left: {{ progress_pct }}%;">
+          <div class="h-full w-0.5 bg-live-500"></div>
+        </div>
+        {% endif %}
+
+        {# Barre de progression live réactive (Alpine, scope parent x-data) #}
+        {% if live %}
+        <div class="pointer-events-none absolute top-0 h-full transition-all duration-700"
+             :style="`left: ${d.perc||0}%`" x-show="d.perc" x-cloak>
+          <div class="h-full w-0.5 bg-live-500"></div>
+          <div class="absolute -bottom-1 -translate-x-1/2 h-3 w-3 rounded-full bg-live-500 ring-2 ring-ink-900"></div>
+        </div>
+        {% endif %}
+      </div>
+
+      {# Labels cols (au-dessus de la zone) #}
+      <div class="relative h-5">
+        {% for c in profile.climbs %}
+        <div class="absolute -translate-x-1/2 truncate text-[10px] text-accent-400"
+             style="left: {{ c.left_pct }}%; max-width: 90px;">
+          {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# Axe distance (bas) #}
+  <div class="relative ml-12 h-4">
+    {% for t in profile.x_ticks %}
+    <div class="absolute -translate-x-1/2 text-[10px] text-slate-500 num" style="left: {{ t.left_pct }}%;">{{ t.label }}</div>
     {% endfor %}
-    {% if progress_pct %}
-      <line x1="{{ progress_pct|unlocalize }}%" y1="0" x2="{{ progress_pct|unlocalize }}%" y2="{{ profile.height }}"
-            stroke="#ef4444" stroke-width="2" vector-effect="non-scaling-stroke"/>
-    {% endif %}
-  </svg>
+    <div class="absolute right-0 -bottom-3 text-[10px] text-slate-600">km</div>
+  </div>
 </div>
 {% elif image_url %}
   <img src="{{ image_url }}" alt="Profil de l'étape" class="w-full rounded-lg bg-white">
 {% else %}
   <div class="rounded-lg bg-ink-800 p-6 text-center text-sm text-slate-500">Profil indisponible</div>
 {% endif %}
+{% endlocalize %}
