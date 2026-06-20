@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-1 text-2xl font-bold">Recherche</h1>
+{% if q %}<p class="mb-5 text-sm text-slate-400">{{ total }} résultat(s) pour « {{ q }} »</p>{% endif %}
+
+{% if not q %}
+<div class="card card-pad text-sm text-slate-400">Saisis au moins 2 caractères.</div>
+{% elif total == 0 %}
+<div class="card card-pad text-sm text-slate-400">Aucun résultat pour « {{ q }} ».</div>
+{% else %}
+<div class="grid gap-6 lg:grid-cols-3">
+  {% for label, items, icon in groups %}
+  {% if items %}
+  <div>
+    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-400">{{ label }}</h2>
+    <div class="card divide-y divide-ink-700/70">
+      {% for it in items %}
+      <a href="{{ it.url }}" class="flex items-center justify-between px-4 py-3 hover:bg-ink-800">
+        <span>{{ it.name }}</span>
+        <span class="num text-xs text-slate-500">{{ it.subtitle }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

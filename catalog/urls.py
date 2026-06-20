@@ -9,6 +9,8 @@ app_name = 'catalog'
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('search/', views.search, name='search'),
+    path('api/search/', views.search_api, name='search_api'),
     path('calendar/', views.calendar, name='calendar'),
     path('races/', views.race_list, name='race_list'),
     path('riders/', views.rider_list, name='rider_list'),

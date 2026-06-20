@@ -30,11 +30,65 @@
         <a href="{% url 'catalog:team_list' %}" class="hover:text-white">Équipes</a>
         <a href="{% url 'catalog:rankings' %}" class="hover:text-white">Classements</a>
       </div>
-      <a href="{% url 'live:dashboard' %}" class="btn-live ml-auto">
-        <span class="live-dot animate-pulse"></span> En direct
+      {# Recherche globale #}
+      <div class="relative ml-auto w-40 sm:w-64" x-data="globalSearch()" @keydown.escape="open=false"
+           @click.outside="open=false">
+        <input type="search" x-model="q" @input.debounce.180ms="run()" @focus="run()"
+               @keydown.enter="go()" placeholder="Rechercher…"
+               class="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-1.5 text-sm
+                      text-slate-200 placeholder:text-slate-500 focus:border-brand-500
+                      focus:outline-none focus:ring-1 focus:ring-brand-500">
+        <div x-show="open && (riders.length || teams.length || races.length || q.length>=2)" x-cloak
+             class="absolute right-0 z-40 mt-1 max-h-96 w-80 overflow-y-auto rounded-lg border
+                    border-ink-600 bg-ink-850 shadow-xl">
+          <template x-for="grp in groups()" :key="grp.label">
+            <div x-show="grp.items.length">
+              <div class="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500" x-text="grp.label"></div>
+              <template x-for="it in grp.items" :key="it.url">
+                <a :href="it.url" class="flex items-center justify-between px-3 py-2 text-sm hover:bg-ink-700">
+                  <span x-text="it.name"></span>
+                  <span class="num text-xs text-slate-500" x-text="it.subtitle"></span>
+                </a>
+              </template>
+            </div>
+          </template>
+          <a :href="searchUrl()" class="block border-t border-ink-700 px-3 py-2 text-xs text-brand-400 hover:bg-ink-700">
+            Voir tous les résultats pour « <span x-text="q"></span> » →
+          </a>
+        </div>
+      </div>
+
+      <a href="{% url 'live:dashboard' %}" class="btn-live shrink-0">
+        <span class="live-dot animate-pulse"></span> <span class="hidden sm:inline">En direct</span>
       </a>
     </nav>
   </header>
+
+  <script>
+    function globalSearch() {
+      return {
+        q: '', riders: [], teams: [], races: [], open: false,
+        groups() {
+          return [
+            {label: 'Coureurs', items: this.riders},
+            {label: 'Équipes', items: this.teams},
+            {label: 'Courses', items: this.races},
+          ];
+        },
+        searchUrl() { return "{% url 'catalog:search' %}?q=" + encodeURIComponent(this.q); },
+        go() { if (this.q.length >= 2) window.location = this.searchUrl(); },
+        async run() {
+          if (this.q.length < 2) { this.open = false; return; }
+          this.open = true;
+          try {
+            const r = await fetch("{% url 'catalog:search_api' %}?q=" + encodeURIComponent(this.q));
+            if (r.ok) { const d = await r.json();
+              this.riders = d.riders; this.teams = d.teams; this.races = d.races; }
+          } catch (e) {}
+        },
+      };
+    }
+  </script>
 
   {% if messages %}
   <div class="container-app mt-3 space-y-2">

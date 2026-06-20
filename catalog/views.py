@@ -110,6 +110,34 @@ def race_detail(request, slug, year):
     })
 
 
+def search_api(request):
+    """Autocomplete : recherche locale instantanée (JSON groupé)."""
+    from catalog.search import search_local
+    q = request.GET.get('q', '').strip()
+    if len(q) < 2:
+        return JsonResponse({'riders': [], 'teams': [], 'races': [], 'q': q})
+    data = search_local(q, limit=5)
+    data['q'] = q
+    return JsonResponse(data)
+
+
+def search(request):
+    """Page de résultats complète (locale + PCS = globale)."""
+    from catalog.search import search_all
+    q = request.GET.get('q', '').strip()
+    results = search_all(q, limit=12, include_pcs=True) if len(q) >= 2 else {'riders': [], 'teams': [], 'races': []}
+    total = sum(len(results[k]) for k in results)
+    groups = [
+        ('Coureurs', results['riders'], 'rider'),
+        ('Équipes', results['teams'], 'team'),
+        ('Courses', results['races'], 'race'),
+    ]
+    return render(request, 'catalog/search.html', {
+        'q': q, 'groups': groups, 'total': total,
+        'page_title': f'Recherche : {q}' if q else 'Recherche',
+    })
+
+
 def race_history(request, slug, year):
     """Endpoint JSON : éditions précédentes + vainqueurs (backfill paresseux, caché)."""
     race = get_object_or_404(Race, slug=slug, year=year)
