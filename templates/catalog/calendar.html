@@ -1,15 +1,58 @@
 {% extends 'base.html' %}
 
 {% block content %}
-
-<h1 class="text-2xl font-bold mb-4">Calendrier {{ year }}</h1>
-<div class="card divide-y divide-ink-700/70">
-  {% for race in races %}
-  <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="flex items-center justify-between px-4 py-3 hover:bg-ink-800">
-    <span>{{ race.name }}</span>
-    <span class="num text-xs text-slate-400">{{ race.start_date|date:"d M" }}{% if race.classification %} · {{ race.classification }}{% endif %}</span>
-  </a>
-  {% empty %}<p class="px-4 py-3 text-sm text-slate-400">Aucune course. Lance la synchronisation du calendrier.</p>{% endfor %}
+<div class="mb-4 flex items-center justify-between gap-3">
+  <h1 class="text-2xl font-bold">{{ month_name }} <span class="num text-slate-500">{{ year }}</span></h1>
+  <div class="flex items-center gap-2">
+    <a href="?year={{ prev.year }}&month={{ prev.month }}" class="btn-ghost" aria-label="Mois précédent">←</a>
+    <a href="{% url 'catalog:calendar' %}" class="btn-ghost text-xs">Aujourd'hui</a>
+    <a href="?year={{ next.year }}&month={{ next.month }}" class="btn-ghost" aria-label="Mois suivant">→</a>
+  </div>
 </div>
 
+{# En-têtes jours #}
+<div class="mb-1 grid grid-cols-7 gap-1">
+  {% for wd in weekdays %}
+  <div class="px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">{{ wd }}</div>
+  {% endfor %}
+</div>
+
+{# Grille #}
+<div class="space-y-1">
+  {% for week in weeks %}
+  <div class="grid grid-cols-7 gap-1">
+    {% for cell in week %}
+    <div class="min-h-[5.5rem] rounded-lg border p-1
+                {% if cell.is_today %}border-brand-500 bg-brand-900/20{% else %}border-ink-700/60{% endif %}
+                {% if not cell.in_month %}opacity-40{% endif %}">
+      <div class="mb-1 px-1 text-right text-xs {% if cell.is_today %}font-bold text-brand-300{% else %}text-slate-500{% endif %}">{{ cell.day }}</div>
+      <div class="space-y-0.5">
+        {% for item in cell.races|slice:":4" %}
+        <a href="{{ item.race.get_absolute_url }}" title="{{ item.race.name }}"
+           class="block truncate rounded px-1.5 py-0.5 text-[11px] leading-tight
+             {% if item.color == 'uwt' %}bg-accent-500/20 text-accent-400
+             {% elif item.color == 'wwt' %}bg-pink-500/20 text-pink-300
+             {% elif item.color == 'pro' %}bg-brand-500/25 text-brand-200
+             {% elif item.color == 'cont' %}bg-slate-500/20 text-slate-300
+             {% else %}bg-ink-700 text-slate-400{% endif %}">
+          {{ item.race.name }}
+        </a>
+        {% endfor %}
+        {% if cell.races|length > 4 %}
+        <div class="px-1.5 text-[10px] text-slate-500">+{{ cell.races|length|add:"-4" }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{# Légende #}
+<div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-500">
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-accent-500/40"></span> WorldTour</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-pink-500/40"></span> Women's WT</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-brand-500/40"></span> ProSeries</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-slate-500/40"></span> .1 / .2</span>
+</div>
 {% endblock %}

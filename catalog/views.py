@@ -24,10 +24,70 @@ def home(request):
     })
 
 
+_MONTHS_FR = ['', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+              'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+_WEEKDAYS_FR = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+
+
+def _race_color(race):
+    c = race.classification or ''
+    if 'UWT' in c:
+        return 'uwt'
+    if 'WWT' in c:
+        return 'wwt'
+    if 'Pro' in c:
+        return 'pro'
+    if c.startswith(('1.1', '2.1')):
+        return 'cont'
+    return 'other'
+
+
 def calendar(request):
-    year = int(request.GET.get('year', date.today().year))
-    races = Race.objects.filter(year=year).order_by('start_date')
-    return render(request, 'catalog/calendar.html', {'races': races, 'year': year, 'page_title': f'Calendrier {year}'})
+    import calendar as pycal
+    from datetime import timedelta
+    today = date.today()
+    try:
+        year = int(request.GET.get('year', today.year))
+        month = int(request.GET.get('month', today.month))
+    except (TypeError, ValueError):
+        year, month = today.year, today.month
+    month = min(max(month, 1), 12)
+
+    first = date(year, month, 1)
+    last = date(year, month, pycal.monthrange(year, month)[1])
+
+    races = Race.objects.filter(start_date__lte=last, end_date__gte=first).order_by('start_date')
+
+    # Bucket des courses par jour
+    by_day = {}
+    for r in races:
+        start = max(r.start_date, first)
+        end = min(r.end_date or r.start_date, last)
+        d = start
+        while d <= end:
+            by_day.setdefault(d, []).append({
+                'race': r, 'color': _race_color(r),
+                'is_start': d == r.start_date,
+            })
+            d += timedelta(days=1)
+
+    weeks = []
+    for week in pycal.Calendar(firstweekday=0).monthdatescalendar(year, month):
+        weeks.append([{
+            'date': d, 'day': d.day, 'in_month': d.month == month,
+            'is_today': d == today, 'races': by_day.get(d, []),
+        } for d in week])
+
+    prev_m = (first - timedelta(days=1))
+    next_m = (last + timedelta(days=1))
+
+    return render(request, 'catalog/calendar.html', {
+        'weeks': weeks, 'year': year, 'month': month,
+        'month_name': _MONTHS_FR[month], 'weekdays': _WEEKDAYS_FR,
+        'prev': {'year': prev_m.year, 'month': prev_m.month},
+        'next': {'year': next_m.year, 'month': next_m.month},
+        'page_title': f'Calendrier {_MONTHS_FR[month]} {year}',
+    })
 
 
 def race_list(request):
