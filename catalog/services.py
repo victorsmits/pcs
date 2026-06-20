@@ -278,6 +278,35 @@ def sync_team(team, force=False):
     return data
 
 
+def get_past_editions(race, n=6):
+    """Éditions précédentes (même slug) avec leur vainqueur — backfill paresseux.
+
+    Renvoie [{'year', 'race', 'winner'}] des n années précédentes.
+    """
+    editions = []
+    for year in range(race.year - 1, race.year - 1 - n, -1):
+        edition = Race.objects.filter(slug=race.slug, year=year).first()
+        if not edition:
+            edition = Race.objects.create(
+                slug=race.slug, year=year, name=race.name,
+                classification=race.classification, category=race.category,
+                circuit=race.circuit, is_stage_race=race.is_stage_race,
+                is_grand_tour=race.is_grand_tour, is_monument=race.is_monument,
+            )
+        if not edition.winner:
+            try:
+                if edition.is_stage_race:
+                    sync_gc(edition)
+                else:
+                    sync_oneday_result(edition)
+                edition.refresh_from_db()
+            except Exception:  # noqa: BLE001
+                pass
+        if edition.winner:
+            editions.append({'year': year, 'race': edition, 'winner': edition.winner})
+    return editions
+
+
 def get_jersey_wearers(race):
     """Porteurs de maillots après la dernière étape disputée (1er = leader général)."""
     from datetime import date as _date

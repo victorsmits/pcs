@@ -64,6 +64,35 @@
   </div>
   {% endif %}
 
+  {# Anciens vainqueurs (chargement asynchrone) #}
+  <div class="card card-pad" x-data="raceHistory()" x-init="load()">
+    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Anciens vainqueurs</h2>
+    <div x-show="loading" class="text-sm text-slate-500">Chargement…</div>
+    <div x-show="!loading && editions.length" class="divide-y divide-ink-700/70">
+      <template x-for="e in editions" :key="e.year">
+        <div class="flex items-center justify-between py-2">
+          <a :href="e.url" class="num text-slate-400 hover:text-white" x-text="e.year"></a>
+          <a :href="e.winner_url" class="text-sm hover:text-white" x-text="e.winner"></a>
+        </div>
+      </template>
+    </div>
+    <div x-show="!loading && !editions.length" class="text-sm text-slate-500">Aucune édition précédente trouvée.</div>
+  </div>
+  <script>
+    function raceHistory() {
+      return {
+        editions: [], loading: true,
+        async load() {
+          try {
+            const r = await fetch("{% url 'catalog:race_history' slug=race.slug year=race.year %}");
+            if (r.ok) this.editions = (await r.json()).editions;
+          } catch (e) {}
+          this.loading = false;
+        },
+      };
+    }
+  </script>
+
   {# Étapes #}
   {% if stages %}
   <div>

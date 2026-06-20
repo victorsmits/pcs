@@ -3,6 +3,7 @@ Les vues seront enrichies en Phase 1 (fetch à la demande, contenus réels)."""
 from datetime import date
 
 from django.db.models import F
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404
 
 from catalog.models import Race, Stage, Rider, Team, Ranking, Result, ClassificationType
@@ -99,6 +100,20 @@ def race_detail(request, slug, year):
         'gc_provisional': gc_provisional, 'ongoing_today': is_ongoing,
         'jersey_riders': jersey_riders, 'page_title': str(race),
     })
+
+
+def race_history(request, slug, year):
+    """Endpoint JSON : éditions précédentes + vainqueurs (backfill paresseux, caché)."""
+    race = get_object_or_404(Race, slug=slug, year=year)
+    editions = services.get_past_editions(race, n=6)
+    return JsonResponse({'editions': [
+        {
+            'year': e['year'],
+            'url': e['race'].get_absolute_url(),
+            'winner': e['winner'].name,
+            'winner_url': e['winner'].get_absolute_url(),
+        } for e in editions
+    ]})
 
 
 def stage_detail(request, slug, year, number):
