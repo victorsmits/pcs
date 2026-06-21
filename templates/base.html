@@ -29,6 +29,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ CSS_VERSION }}">
+  {# push.js doit être chargé AVANT Alpine pour enregistrer ses composants (alpine:init) #}
+  <script defer src="{% static 'js/push.js' %}?v={{ CSS_VERSION }}"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
 
   {# PWA #}
