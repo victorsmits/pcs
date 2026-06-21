@@ -201,13 +201,23 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-# Reverse proxy externe
+# Reverse proxy externe (TLS terminé en amont)
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     'https://pcs.victorsmits.com',
     'https://www.pcs.victorsmits.com',
 ]
+
+# Durcissement en production (DEBUG=False)
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_SECONDS = 2592000          # 30 jours
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'  # callbacks OAuth en https
 
 LOGGING = {
     'version': 1,

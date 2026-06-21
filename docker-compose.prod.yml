@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Production : web (gunicorn) + worker (Celery) + beat (planif. admin) + db + redis.
 
 x-app-env: &app-env
@@ -14,6 +12,9 @@ x-app-env: &app-env
   REDIS_URL: redis://pcs_redis:6379/0
   CELERY_BROKER_URL: redis://pcs_redis:6379/0
   CURRENT_SEASON: ${CURRENT_SEASON:-2026}
+  GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+  GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+  ADMIN_EMAILS: ${ADMIN_EMAILS:-victor.smits@shippingbo.com}
   HOME: /tmp
 
 services:
@@ -53,10 +54,9 @@ services:
     networks: [pcs_network]
     ports:
       - "8800:8000"
-    volumes:
-      - static_volume:/app/staticfiles
     command: >
-      sh -c "python manage.py migrate &&
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py setup_beat &&
              gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-tmp-dir /tmp pcs_project.wsgi:application"
 
   worker:
@@ -87,4 +87,3 @@ networks:
 volumes:
   pcs_pgdata:
   pcs_redisdata:
-  static_volume:

@@ -1,5 +1,3 @@
-version: '3.9'
-
 # Stack de développement local : base de données + Redis.
 # Lance l'app avec : py manage.py runserver  (et celery en local si besoin).
 
