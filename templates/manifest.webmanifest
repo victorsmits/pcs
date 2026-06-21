@@ -1,0 +1,18 @@
+{% load static %}{
+  "name": "PCS Live — Cyclisme en direct",
+  "short_name": "PCS Live",
+  "description": "Suivi de course cycliste en direct : profils, étapes, classements.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0f17",
+  "theme_color": "#0b0f17",
+  "lang": "fr",
+  "categories": ["sports"],
+  "icons": [
+    {"src": "{% static 'img/icon-192.png' %}", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "{% static 'img/icon-512.png' %}", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "{% static 'img/icon-maskable-512.png' %}", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
