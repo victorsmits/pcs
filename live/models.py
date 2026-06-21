@@ -1,7 +1,7 @@
-"""Modèles temps-réel : état live d'une étape, groupes, timeline."""
+"""Modèles temps-réel : état live d'une étape, groupes, timeline, push."""
 from django.db import models
 
-from catalog.models import Stage
+from catalog.models import Race, Stage
 
 
 class LiveSession(models.Model):
@@ -26,6 +26,11 @@ class LiveSession(models.Model):
     started_ts = models.BigIntegerField(null=True, blank=True)
     start_time = models.CharField(max_length=10, blank=True)  # heure de départ (CET)
     finished = models.BooleanField(default=False)
+    # Anti-doublon des notifications push (une seule par évènement et par session)
+    notified_start = models.BooleanField(default=False)
+    notified_finish = models.BooleanField(default=False)
+    notified_reminder = models.BooleanField(default=False)
+    last_notified_event_seq = models.IntegerField(default=0)
     is_active = models.BooleanField(default=True, db_index=True,
                                     help_text='Si vrai, le worker poll cette session.')
     raw_data = models.JSONField(default=dict, blank=True)   # dernier objet `data` brut
@@ -79,3 +84,43 @@ class LiveEvent(models.Model):
 
     def __str__(self):
         return f'{self.marker} {self.text[:40]}'
+
+
+class PushSubscription(models.Model):
+    """Abonnement Web Push d'un appareil (anonyme : identifié par son endpoint)."""
+    endpoint = models.CharField(max_length=600, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    user_agent = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Abonnement push'
+        verbose_name_plural = 'Abonnements push'
+        ordering = ['-last_seen']
+
+    def __str__(self):
+        return f'{self.endpoint[:48]}…'
+
+    def as_dict(self):
+        """Format attendu par pywebpush (subscription_info)."""
+        return {'endpoint': self.endpoint,
+                'keys': {'p256dh': self.p256dh, 'auth': self.auth}}
+
+
+class RaceFollow(models.Model):
+    """Un appareil suit une course → reçoit ses notifications push."""
+    subscription = models.ForeignKey(PushSubscription, on_delete=models.CASCADE,
+                                     related_name='follows')
+    race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='followers')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Suivi de course'
+        verbose_name_plural = 'Suivis de course'
+        unique_together = [('subscription', 'race')]
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.subscription} → {self.race}'

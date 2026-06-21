@@ -88,6 +88,7 @@ def sync_live_session(stage, force=True):
         return None
 
     session, _ = LiveSession.objects.get_or_create(stage=stage)
+    prev_status, prev_finished = session.race_status, session.finished
     for field, value in state.items():
         setattr(session, field, value)
     session.raw_data = parsed['data']
@@ -127,6 +128,15 @@ def sync_live_session(stage, force=True):
     new_events = len(to_create)
     if to_create:
         LiveEvent.objects.bulk_create(to_create, ignore_conflicts=True)
+
+    # Notifications push (départ / arrivée / moments clés / rappel) — best-effort.
+    try:
+        from live.notifications import process_session_notifications
+        process_session_notifications(
+            session, prev_status, prev_finished,
+            [ev.seqnr for ev in to_create])
+    except Exception:  # noqa: BLE001 — ne jamais casser le poll live
+        logger.exception('Notif push échouée pour %s', stage)
 
     _log_live(stage, SyncLog.Status.OK,
               f"{state['race_status']} km{state.get('km_done')} +{new_events} events",

@@ -68,7 +68,26 @@ Ensuite, les tâches périodiques (worker + beat) prennent le relais :
 - **Sessions live** : activer / suspendre.
 - **Logs de synchronisation** : suivi des fetchs PCS.
 
-## 7. Mise à jour
+## 7. Notifications push (PWA) — optionnel
+1. Générer une paire de clés VAPID :
+   ```bash
+   docker compose -f docker-compose.prod.yml run --rm web python manage.py vapid_keys
+   ```
+2. Coller les deux valeurs dans `.env` :
+   ```bash
+   VAPID_PUBLIC_KEY=...
+   VAPID_PRIVATE_KEY=...        # secret
+   VAPID_ADMIN_EMAIL=admin@pcs.victorsmits.com
+   ```
+3. Redémarrer (`up -d`). Le bouton **Suivre** apparaît alors sur les pages course/étape.
+4. Sur mobile : l'app doit être **installée** (écran d'accueil). iOS exige **16.4+**.
+
+> Sans clés VAPID, le push est désactivé proprement (le bouton ne s'affiche pas) ;
+> tout le reste fonctionne. Les notifications partent du worker live
+> (départ, arrivée/vainqueur, moments clés, rappel ~15 min avant le départ) vers
+> les appareils ayant « suivi » la course.
+
+## 8. Mise à jour
 ```bash
 git pull
 docker build -t victorsmits/pcs-live:latest .

@@ -1,0 +1,21 @@
+{% comment %}
+Bouton « Suivre » (notifications push) pour une course.
+Contexte attendu : `race` (avec .slug et .year). S'auto-masque si non supporté.
+{% endcomment %}
+{% load l10n %}
+<div x-data="raceFollow('{{ race.slug }}', {{ race.year|unlocalize }})" x-init="init()"
+     x-show="supported && enabled" x-cloak class="inline-flex">
+  <button type="button" @click="toggle()" :disabled="busy || denied"
+          :title="denied ? 'Autorise les notifications dans ton navigateur' : 'Recevoir les notifications de cette course'"
+          class="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition
+                 disabled:opacity-60"
+          :class="following
+            ? 'border-brand-500 bg-brand-500/10 text-brand-600 dark:text-brand-300'
+            : 'border-ink-600 bg-ink-800 text-slate-200 hover:border-brand-500'">
+    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+    </svg>
+    <span x-text="label"></span>
+  </button>
+</div>

@@ -49,3 +49,31 @@ self.addEventListener('fetch', (e) => {
     );
   }
 });
+
+// ─────────────── Notifications push ───────────────
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data && e.data.text() }; }
+  const title = d.title || 'PCS Live';
+  e.waitUntil(self.registration.showNotification(title, {
+    body: d.body || '',
+    icon: '{% static "img/icon-192.png" %}',
+    badge: '{% static "img/icon-192.png" %}',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    data: { url: d.url || '/' }
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((cl) => {
+      for (const c of cl) {
+        if (c.url.indexOf(url) !== -1 && 'focus' in c) return c.focus();
+      }
+      return clients.openWindow(url);
+    })
+  );
+});
