@@ -63,6 +63,22 @@ class SyncLogAdmin(admin.ModelAdmin):
     search_fields = ('ref', 'message')
     date_hierarchy = 'created_at'
     readonly_fields = ('created_at',)
+    change_list_template = 'admin/synclog_changelist.html'
 
     def has_add_permission(self, request):
         return False
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [path('clear-cache/', self.admin_site.admin_view(self.clear_cache_view),
+                       name='core_synclog_clear_cache')]
+        return custom + urls
+
+    def clear_cache_view(self, request):
+        from django.core.cache import cache
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        cache.clear()
+        messages.success(request, 'Cache PCS vidé. Les prochaines pages seront resynchronisées depuis PCS.')
+        return redirect('admin:core_synclog_changelist')
