@@ -27,6 +27,7 @@ class Command(BaseCommand):
             ('live: découverte du jour', 'live.tasks.discover_today', {'interval': disc_iv}),
             ('catalog: sync calendrier', 'catalog.tasks.sync_calendar_year', {'crontab': cal_cron}),
             ('catalog: upgrade profils image', 'catalog.tasks.resync_image_profiles', {'interval': prof_iv}),
+            ('catalog: échelle profils image', 'catalog.tasks.backfill_profile_scales', {'interval': prof_iv}),
         ]
         for name, task, sched in tasks:
             PeriodicTask.objects.update_or_create(
