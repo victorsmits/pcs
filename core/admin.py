@@ -1,6 +1,39 @@
+import json
+
 from django.contrib import admin
+from django.utils.module_loading import import_string
 
 from core.models import SyncLog
+
+
+# --- Tâches périodiques : ajout d'une action « Exécuter maintenant » ---
+try:
+    from django_celery_beat.models import PeriodicTask
+    from django_celery_beat.admin import PeriodicTaskAdmin
+
+    admin.site.unregister(PeriodicTask)
+
+    @admin.register(PeriodicTask)
+    class RunnablePeriodicTaskAdmin(PeriodicTaskAdmin):
+        @admin.action(description='Exécuter maintenant (synchrone)')
+        def run_now(self, request, queryset):
+            for pt in queryset:
+                try:
+                    task = import_string(pt.task)
+                    args = json.loads(pt.args or '[]')
+                    kwargs = json.loads(pt.kwargs or '{}')
+                    result = task.apply(args=args, kwargs=kwargs)
+                    self.message_user(request, f'« {pt.name} » exécutée → {result.result}')
+                except Exception as exc:  # noqa: BLE001
+                    self.message_user(request, f'« {pt.name} » : erreur {exc}',
+                                      level='error')
+
+        def get_actions(self, request):
+            actions = super().get_actions(request)
+            actions['run_now'] = self.get_action('run_now')
+            return actions
+except Exception:  # noqa: BLE001 — django_celery_beat absent
+    pass
 
 
 @admin.register(SyncLog)
