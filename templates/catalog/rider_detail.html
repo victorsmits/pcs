@@ -11,7 +11,7 @@
       <h1 class="text-2xl font-bold">{{ rider.name }}</h1>
       <p class="num mt-1 text-sm text-slate-400">
         {% if rider.nationality %}{{ rider.nationality|upper }}{% endif %}
-        {% if rider.current_team %} · <a href="{{ rider.current_team.get_absolute_url }}" class="text-brand-400 hover:text-brand-300">{{ rider.current_team.name }}</a>{% endif %}
+        {% if rider.current_team %} · <a href="{{ rider.current_team.get_absolute_url }}" class="text-brand-600 dark:text-brand-400 hover:text-brand-300">{{ rider.current_team.name }}</a>{% endif %}
       </p>
       <dl class="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm">
         {% if rider.birthdate %}<div><dt class="inline text-slate-500">Né le </dt><dd class="num inline">{{ rider.birthdate|date:"d/m/Y" }}</dd></div>{% endif %}
@@ -44,7 +44,7 @@
         {% for r in top_results %}
         <tr>
           <td class="num text-slate-400">{{ r.date }}</td>
-          <td class="num text-center {% if r.rank == '1' %}text-accent-400{% endif %}">{{ r.rank|default:"—" }}</td>
+          <td class="num text-center {% if r.rank == '1' %}text-accent-600 dark:text-accent-400{% endif %}">{{ r.rank|default:"—" }}</td>
           <td>{{ r.race }}</td>
         </tr>
         {% endfor %}

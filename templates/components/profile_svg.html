@@ -65,7 +65,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs`
       </div>
 
       {# Labels cols (au-dessus de la zone) — alternés sur 2 niveaux pour éviter le chevauchement #}
-      <div class="relative h-8 text-[10px] leading-tight text-accent-400">
+      <div class="relative h-8 text-[10px] leading-tight text-accent-600 dark:text-accent-400">
         {% for c in profile.climbs %}
         <div class="absolute -translate-x-1/2 truncate"
              style="left: {{ c.left_pct }}%; max-width: 84px; top: {% cycle '0' '14px' %};"

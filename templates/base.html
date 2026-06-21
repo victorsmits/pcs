@@ -1,20 +1,23 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script>
     // Applique le thème avant le rendu (anti-flash). Défaut : sombre.
     (function () {
-      try {
-        if (localStorage.getItem('theme') === 'light') {
-          document.documentElement.classList.add('light');
-        }
-      } catch (e) {}
+      var t = 'dark';
+      try { if (localStorage.getItem('theme') === 'light') t = 'light'; } catch (e) {}
+      var el = document.documentElement;
+      el.classList.remove('dark', 'light');
+      el.classList.add(t);
     })();
     function toggleTheme() {
-      var light = document.documentElement.classList.toggle('light');
+      var el = document.documentElement;
+      var light = !el.classList.contains('light');
+      el.classList.remove('dark', 'light');
+      el.classList.add(light ? 'light' : 'dark');
       try { localStorage.setItem('theme', light ? 'light' : 'dark'); } catch (e) {}
     }
   </script>
@@ -25,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}?v={{ CSS_VERSION }}">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   {% block head_extra %}{% endblock %}
 </head>
@@ -73,7 +76,7 @@
               </template>
             </div>
           </template>
-          <a :href="searchUrl()" class="block border-t border-ink-700 px-3 py-2 text-xs text-brand-400 hover:bg-ink-700">
+          <a :href="searchUrl()" class="block border-t border-ink-700 px-3 py-2 text-xs text-brand-600 dark:text-brand-400 hover:bg-ink-700">
             Voir tous les résultats pour « <span x-text="q"></span> » →
           </a>
         </div>

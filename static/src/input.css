@@ -75,7 +75,7 @@
     @apply badge bg-live-600/15 text-live-500 ring-1 ring-inset ring-live-500/30;
   }
   .badge-soon {
-    @apply badge bg-accent-500/15 text-accent-400 ring-1 ring-inset ring-accent-500/30;
+    @apply badge bg-accent-500/15 text-accent-600 ring-1 ring-inset ring-accent-500/30 dark:text-accent-400;
   }
   .badge-done {
     @apply badge bg-ink-700 text-slate-400 ring-1 ring-inset ring-ink-600;

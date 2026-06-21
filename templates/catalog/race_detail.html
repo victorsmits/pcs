@@ -8,8 +8,8 @@
     <div>
       <div class="flex flex-wrap items-center gap-2">
         <h1 class="text-2xl font-bold">{{ race.name }} <span class="num text-lg text-slate-500">{{ race.year }}</span></h1>
-        {% if race.is_grand_tour %}<span class="badge bg-accent-500/15 text-accent-400 ring-1 ring-inset ring-accent-500/30">Grand Tour</span>
-        {% elif race.is_monument %}<span class="badge bg-accent-500/15 text-accent-400 ring-1 ring-inset ring-accent-500/30">Monument</span>{% endif %}
+        {% if race.is_grand_tour %}<span class="badge bg-accent-500/15 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-500/30">Grand Tour</span>
+        {% elif race.is_monument %}<span class="badge bg-accent-500/15 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-500/30">Monument</span>{% endif %}
       </div>
       <p class="num mt-1 text-sm text-slate-400">
         {{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
@@ -29,7 +29,7 @@
       {% if race.classification %}<div><dt class="text-slate-500">Classification</dt><dd class="num">{{ race.classification }}</dd></div>{% endif %}
       {% if race.distance %}<div><dt class="text-slate-500">Distance</dt><dd class="num">{{ race.distance }} km</dd></div>{% endif %}
       <div><dt class="text-slate-500">Type</dt><dd>{% if race.is_stage_race %}Course par étapes{% else %}Course d'un jour{% endif %}</dd></div>
-      {% if race.winner %}<div><dt class="text-slate-500">Vainqueur</dt><dd><a href="{{ race.winner.get_absolute_url }}" class="text-brand-400 hover:text-brand-300">{{ race.winner.name }}</a></dd></div>{% endif %}
+      {% if race.winner %}<div><dt class="text-slate-500">Vainqueur</dt><dd><a href="{{ race.winner.get_absolute_url }}" class="text-brand-600 dark:text-brand-400 hover:text-brand-300">{{ race.winner.name }}</a></dd></div>{% endif %}
     </dl>
   </div>
 
@@ -113,7 +113,7 @@
           <div class="truncate text-sm text-slate-400">{{ s.departure }} → {{ s.arrival }}</div>
         </div>
         <div class="text-right">
-          {% if s.winner %}<div class="text-sm text-brand-400">{{ s.winner.name }}</div>{% endif %}
+          {% if s.winner %}<div class="text-sm text-brand-600 dark:text-brand-400">{{ s.winner.name }}</div>{% endif %}
           {% if s.distance %}<div class="num text-xs text-slate-500">{{ s.distance }} km</div>{% endif %}
         </div>
       </a>

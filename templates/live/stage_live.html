@@ -71,7 +71,7 @@
              :class="k.passed ? 'opacity-40' : 'bg-ink-800'">
           <div class="flex items-center gap-2">
             <span class="text-sm font-medium text-fg" x-text="k.name"></span>
-            <span class="num text-xs text-accent-400" x-show="k.category" x-text="k.category"></span>
+            <span class="num text-xs text-accent-600 dark:text-accent-400" x-show="k.category" x-text="k.category"></span>
           </div>
           <div class="num text-xs text-slate-500">
             <span x-text="k.km"></span> km<span x-show="!k.passed"> · à <span x-text="k.to_go"></span> km</span>
@@ -91,7 +91,7 @@
           <div class="rounded-lg border border-ink-700/70 bg-ink-800 p-3">
             <div class="flex items-center justify-between">
               <span class="font-medium text-fg" x-text="g.label"></span>
-              <span class="num text-sm text-accent-400" x-text="g.gap"></span>
+              <span class="num text-sm text-accent-600 dark:text-accent-400" x-text="g.gap"></span>
             </div>
             <div class="num mt-1 text-xs text-slate-500"><span x-text="g.rider_count"></span> coureur(s)</div>
             <div class="mt-1 text-xs text-slate-400" x-show="g.riders && g.riders.length"
