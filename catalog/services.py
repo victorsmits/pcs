@@ -414,6 +414,31 @@ def resync_image_profiles(limit=20, window_days=60):
     return {'checked': checked, 'upgraded': upgraded}
 
 
+def sync_startlist(race, force=False):
+    """Récupère les engagés (startlist) d'une course → StartListEntry."""
+    from core.parsers.startlist import parse_startlist
+    from catalog.models import StartListEntry
+    t0 = time.monotonic()
+    url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/startlist'
+    soup = pcs_client.get_soup(url, cache_ttl=1800, force=force)
+    if not soup:
+        return 0
+    rows = parse_startlist(soup)
+    saved = 0
+    for r in rows:
+        rider = get_or_create_rider(r['rider_slug'], r['rider_name'], r['nat'])
+        if not rider:
+            continue
+        team = get_or_create_team(r['team_slug'], r['team_year'], r['team_name'])
+        StartListEntry.objects.update_or_create(
+            race=race, rider=rider, defaults={'team': team, 'bib': r['bib']},
+        )
+        saved += 1
+    _log('startlist', f'{race.slug}/{race.year}', SyncLog.Status.OK if saved else SyncLog.Status.EMPTY,
+         f'{saved} engagés', int((time.monotonic() - t0) * 1000))
+    return saved
+
+
 def sync_oneday_result(race, force=False):
     """Récupère le résultat d'une course d'un jour (classement unique, stage=None)."""
     for suffix in ('result', ''):

@@ -223,6 +223,32 @@ def search(request):
     })
 
 
+def startlist(request, slug, year):
+    """Liste des engagés, groupable (équipe / nationalité / alphabétique)."""
+    import json
+    race = get_object_or_404(Race, slug=slug, year=year)
+    from catalog.models import StartListEntry
+    if not StartListEntry.objects.filter(race=race).exists():
+        try:
+            services.sync_startlist(race)
+        except Exception:  # noqa: BLE001
+            pass
+    entries = (StartListEntry.objects.filter(race=race)
+               .select_related('rider', 'team').order_by('bib'))
+    data = [{
+        'bib': e.bib,
+        'name': e.rider.name,
+        'rider_url': e.rider.get_absolute_url(),
+        'nat': (e.rider.nationality or '').upper(),
+        'team': e.team.name if e.team else '—',
+        'team_url': e.team.get_absolute_url() if e.team else '',
+    } for e in entries]
+    return render(request, 'catalog/startlist.html', {
+        'race': race, 'entries_json': json.dumps(data), 'count': len(data),
+        'page_title': f'Engagés — {race.name} {race.year}',
+    })
+
+
 def race_history(request, slug, year):
     """Endpoint JSON : éditions précédentes + vainqueurs (backfill paresseux, caché)."""
     race = get_object_or_404(Race, slug=slug, year=year)

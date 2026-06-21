@@ -17,11 +17,14 @@
         {% if race.get_category_display %} · {{ race.get_category_display }}{% endif %}
       </p>
     </div>
-    {% if ongoing_today %}
-    <a href="{% url 'catalog:race_go_live' slug=race.slug year=race.year %}" class="btn-live">
-      <span class="live-dot animate-pulse"></span> Étape en direct
-    </a>
-    {% endif %}
+    <div class="flex items-center gap-2">
+      <a href="{% url 'catalog:startlist' slug=race.slug year=race.year %}" class="btn-ghost">Engagés</a>
+      {% if ongoing_today %}
+      <a href="{% url 'catalog:race_go_live' slug=race.slug year=race.year %}" class="btn-live">
+        <span class="live-dot animate-pulse"></span> Étape en direct
+      </a>
+      {% endif %}
+    </div>
   </div>
 
   <div class="grid gap-6 lg:grid-cols-3">
