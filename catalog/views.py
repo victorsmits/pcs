@@ -168,9 +168,12 @@ def race_detail(request, slug, year):
     gc = []
     oneday = []
     gc_provisional = False
+    race_started = bool(race.start_date and race.start_date <= today)
     if race.is_stage_race:
-        # En course : on rafraîchit le GC provisoire à chaque visite
-        if is_ongoing or not Result.objects.filter(race=race, classification=ClassificationType.GC).exists():
+        # Une course non démarrée n'a pas de GC : inutile (et coûteux) de scraper.
+        # En course : on rafraîchit le GC provisoire à chaque visite.
+        has_gc = Result.objects.filter(race=race, classification=ClassificationType.GC).exists()
+        if race_started and (is_ongoing or not has_gc):
             try:
                 services.sync_gc(race, force=is_ongoing)
             except Exception:  # noqa: BLE001
@@ -181,13 +184,13 @@ def race_detail(request, slug, year):
 
     # Porteurs de maillots (depuis la dernière étape disputée)
     jersey_riders = []
-    if race.is_stage_race and (gc or stages):
+    if race.is_stage_race and race_started and (gc or stages):
         try:
             jersey_riders = services.get_jersey_wearers(race)
         except Exception:  # noqa: BLE001
             pass
     else:
-        if not Result.objects.filter(race=race, stage__isnull=True).exists():
+        if race_started and not Result.objects.filter(race=race, stage__isnull=True).exists():
             try:
                 services.sync_oneday_result(race)
             except Exception:  # noqa: BLE001

@@ -117,12 +117,12 @@ def sync_calendar(year, circuits=None):
 def get_or_create_team(slug, year, name=''):
     if not slug:
         return None
-    year = year or 0
+    year = year or 0  # Team.year est NOT NULL : 0 = année inconnue
     team = (Team.objects.filter(slug=slug, year=year).first()
             or Team.objects.filter(slug=slug).order_by('-year').first())
     if team:
         return team
-    return Team.objects.create(slug=slug, year=year or None,
+    return Team.objects.create(slug=slug, year=year,
                                name=name or slug.replace('-', ' ').title())
 
 
@@ -193,11 +193,15 @@ def _sync_provisional_gc(race, t0=None):
     """Construit un GC provisoire à partir de la colonne GC de la dernière étape."""
     from datetime import date as _date
     t0 = t0 or time.monotonic()
-    # On parcourt les étapes disputées de la plus récente à la plus ancienne
-    # jusqu'à en trouver une dont les résultats portent une colonne GC.
-    candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number'))
+    # On ne parcourt QUE les étapes déjà disputées, de la plus récente à la plus
+    # ancienne, jusqu'à en trouver une portant une colonne GC. Plafonné pour ne
+    # jamais marteler PCS (ni bloquer la requête web) sur une course future : sans
+    # étape disputée il n'y a pas de GC provisoire possible → on s'arrête tout de suite.
+    candidates = list(
+        race.stages.filter(date__lte=_date.today()).order_by('-number')[:4]
+    )
     if not candidates:
-        candidates = list(race.stages.order_by('-number'))
+        return 0
     rows = []
     used = None
     for st in candidates:
@@ -394,8 +398,8 @@ def get_jersey_wearers(race):
     conventionnel (Leader, Points, Montagne, Jeunes…). Renvoie [{rider,label,color}]."""
     from datetime import date as _date
     from core.parsers.stage import parse_jersey_wearers
-    candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number')) \
-        or list(race.stages.order_by('-number'))
+    # Uniquement les étapes disputées (plafonnées) : pas de maillots avant le départ.
+    candidates = list(race.stages.filter(date__lte=_date.today()).order_by('-number')[:4])
     for st in candidates:
         url = f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}/stage-{st.number}'
         soup = pcs_client.get_soup(url, cache_ttl=300)
@@ -418,7 +422,7 @@ def backfill_profile_from_image(stage):
     """Reconstruit elevation_points depuis l'image JPG (étape déjà synchro sans profil)."""
     if stage.elevation_points or not stage.profile_image_url:
         return False
-    from core.profile_from_image import extract_elevation_from_image
+    from core.profile_from_image import extract_elevation_from_image, estimate_elevation_range
     img = pcs_client.fetch_bytes(stage.profile_image_url, cache_ttl=7 * 86400)
     if not img:
         return False
@@ -426,7 +430,13 @@ def backfill_profile_from_image(stage):
     if pts:
         stage.elevation_points = pts
         stage.profile_from_image = True
-        stage.save(update_fields=['elevation_points', 'profile_from_image'])
+        fields = ['elevation_points', 'profile_from_image']
+        if stage.min_elevation is None or stage.max_elevation is None:
+            lo, hi = estimate_elevation_range(img)
+            if lo is not None:
+                stage.min_elevation, stage.max_elevation = lo, hi
+                fields += ['min_elevation', 'max_elevation']
+        stage.save(update_fields=fields)
         return True
     return False
 
@@ -614,13 +624,18 @@ def sync_stage_detail(stage, force=False):
     # Repli : si pas de profil vectoriel (étape future), on reconstruit la
     # silhouette d'altitude depuis l'image de profil PCS (analyse de pixels).
     if not stage.elevation_points and stage.profile_image_url:
-        from core.profile_from_image import extract_elevation_from_image
+        from core.profile_from_image import extract_elevation_from_image, estimate_elevation_range
         img = pcs_client.fetch_bytes(stage.profile_image_url, cache_ttl=7 * 86400, force=force)
         if img:
             pts = extract_elevation_from_image(img)
             if pts:
                 stage.elevation_points = pts
                 stage.profile_from_image = True
+                # Échelle : lit l'axe d'altitude de l'image (OCR) si possible.
+                if stage.min_elevation is None or stage.max_elevation is None:
+                    lo, hi = estimate_elevation_range(img)
+                    if lo is not None:
+                        stage.min_elevation, stage.max_elevation = lo, hi
 
     stage.detail_synced_at = timezone.now()
     stage.save()
