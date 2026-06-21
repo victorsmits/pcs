@@ -30,6 +30,7 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      {% include 'components/follow_button.html' %}
       <a href="{% url 'catalog:startlist' slug=race.slug year=race.year %}" class="btn-ghost">Engagés</a>
       {% if ongoing_today %}
       <a href="{% url 'catalog:race_go_live' slug=race.slug year=race.year %}" class="btn-live">

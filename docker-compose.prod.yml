@@ -15,6 +15,9 @@ x-app-env: &app-env
   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
   GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
   ADMIN_EMAILS: ${ADMIN_EMAILS:-victor.smits@shippingbo.com}
+  VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+  VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+  VAPID_ADMIN_EMAIL: ${VAPID_ADMIN_EMAIL:-admin@pcs.victorsmits.com}
   HOME: /tmp
 
 services:

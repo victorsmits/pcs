@@ -219,6 +219,15 @@ if not DEBUG:
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'  # callbacks OAuth en https
 
+# --- Web Push (notifications PWA) ---
+# Clé VAPID publique exposée au front, privée gardée secrète (variable d'env).
+# Générer une paire : `python manage.py vapid_keys`.
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', '')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', '')
+VAPID_ADMIN_EMAIL = os.environ.get('VAPID_ADMIN_EMAIL', 'admin@pcs.victorsmits.com')
+# Push actif seulement si les deux clés sont présentes (sinon dégradation propre).
+PUSH_ENABLED = bool(VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY)
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
