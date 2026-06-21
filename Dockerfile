@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 FROM python:3.13-slim AS production
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DEBIAN_FRONTEND=noninteractive
 # nodejs : moteur JS de secours pour cloudscraper (curl_cffi reste prioritaire)
+# tesseract-ocr : lecture de l'axe d'altitude des profils image (échelle en mètres)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libpq5 curl nodejs && rm -rf /var/lib/apt/lists/*
+        libpq5 curl nodejs tesseract-ocr && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -r django && useradd -r -g django django
 WORKDIR /app
@@ -41,4 +42,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=30s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/ || exit 1
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--worker-tmp-dir", "/tmp", "pcs_project.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "60", "--worker-tmp-dir", "/tmp", "pcs_project.wsgi:application"]

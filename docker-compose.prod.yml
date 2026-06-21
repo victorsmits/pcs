@@ -57,7 +57,7 @@ services:
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py setup_beat &&
-             gunicorn --bind 0.0.0.0:8000 --workers 3 --worker-tmp-dir /tmp pcs_project.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 60 --worker-tmp-dir /tmp pcs_project.wsgi:application"
 
   worker:
     image: ${DOCKER_HUB_USERNAME}/pcs-live:latest

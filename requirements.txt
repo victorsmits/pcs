@@ -26,3 +26,4 @@ cryptography>=42
 # --- Utilities ---
 Pillow>=10.0
 django-extensions>=3.2
+pytesseract>=0.3.10           # OCR de l'axe d'altitude des profils image (échelle)
