@@ -1,4 +1,5 @@
-version: '3.9'
+# Stack de développement local : base de données + Redis.
+# Lance l'app avec : py manage.py runserver  (et celery en local si besoin).
 
 services:
   db:
@@ -19,5 +20,15 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    container_name: pcs_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - pcs_redisdata:/data
+
 volumes:
   pcs_pgdata:
+  pcs_redisdata:

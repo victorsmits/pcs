@@ -1,60 +1,84 @@
+import json
+
 from django.contrib import admin
-from django.contrib.admin import AdminSite
-from django.urls import path
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.core.cache import cache
+from django.utils.module_loading import import_string
 
-admin.site.site_header = 'CycloStats Administration'
-admin.site.site_title = 'CycloStats Admin'
-admin.site.index_title = 'Tableau de bord'
+from core.models import SyncLog
 
 
-def _admin_sync_view(request):
-    """Admin-embedded sync page using admin base template."""
-    from core.views import SYNC_TYPES, _run_sync
-    import threading, uuid
-    from datetime import date
+# --- Tâches périodiques : ajout d'une action « Exécuter maintenant » ---
+try:
+    from django_celery_beat.models import PeriodicTask
+    from django_celery_beat.admin import PeriodicTaskAdmin
 
-    if request.method == 'POST':
-        sync_type = request.POST.get('sync_type', 'races')
-        years_raw = request.POST.getlist('years')
-        years = [int(y) for y in years_raw if y.isdigit()]
-        if not years:
-            years = [date.today().year]
-        job_id = uuid.uuid4().hex
-        cache.set(f'sync:{job_id}:log',  [], timeout=7200)
-        cache.set(f'sync:{job_id}:done', False, timeout=7200)
-        threading.Thread(target=_run_sync, args=(job_id, sync_type, years), daemon=True).start()
-        return JsonResponse({'job_id': job_id})
+    admin.site.unregister(PeriodicTask)
 
-    years_available = list(range(date.today().year + 1, 2019, -1))
-    context = {
-        **admin.site.each_context(request),
-        'title': 'Synchronisation PCS',
-        'years_available': years_available,
-        'default_years': [str(date.today().year)],
-        'sync_types': SYNC_TYPES,
-    }
-    return render(request, 'admin/sync.html', context)
+    @admin.register(PeriodicTask)
+    class RunnablePeriodicTaskAdmin(PeriodicTaskAdmin):
+        @admin.action(description='Exécuter maintenant (synchrone)')
+        def run_now(self, request, queryset):
+            for pt in queryset:
+                try:
+                    task = import_string(pt.task)
+                    args = json.loads(pt.args or '[]')
+                    kwargs = json.loads(pt.kwargs or '{}')
+                    result = task.apply(args=args, kwargs=kwargs)
+                    self.message_user(request, f'« {pt.name} » exécutée → {result.result}')
+                except Exception as exc:  # noqa: BLE001
+                    self.message_user(request, f'« {pt.name} » : erreur {exc}',
+                                      level='error')
 
-
-def _admin_sync_status(request, job_id):
-    """Status polling endpoint (reuse core view)."""
-    from core.views import sync_status_api
-    return sync_status_api(request, job_id)
+        def get_actions(self, request):
+            actions = super().get_actions(request)
+            actions['run_now'] = self.get_action('run_now')
+            return actions
+except Exception:  # noqa: BLE001 — django_celery_beat absent
+    pass
 
 
-# Patch AdminSite.get_urls to inject /admin/sync/
-_orig_get_urls = AdminSite.get_urls
+# --- Désencombrement : on retire de l'admin les modèles tiers inutiles ici ---
+def _unregister(label, model):
+    try:
+        from django.apps import apps
+        admin.site.unregister(apps.get_model(label, model))
+    except Exception:  # noqa: BLE001
+        pass
 
 
-def _custom_get_urls(self):
-    custom = [
-        path('sync/', self.admin_view(_admin_sync_view), name='admin_sync'),
-        path('sync/<str:job_id>/status/', self.admin_view(_admin_sync_status), name='admin_sync_status'),
-    ]
-    return custom + _orig_get_urls(self)
+for _lbl, _mdl in [
+    ('sites', 'Site'),
+    ('socialaccount', 'SocialApp'),      # identifiants via variables d'env, pas la BDD
+    ('socialaccount', 'SocialToken'),
+    ('django_celery_beat', 'ClockedSchedule'),
+    ('django_celery_beat', 'SolarSchedule'),
+    ('django_celery_results', 'GroupResult'),
+]:
+    _unregister(_lbl, _mdl)
 
 
-AdminSite.get_urls = _custom_get_urls
+@admin.register(SyncLog)
+class SyncLogAdmin(admin.ModelAdmin):
+    list_display = ('created_at', 'entity_type', 'ref', 'status', 'duration_ms')
+    list_filter = ('status', 'entity_type', 'created_at')
+    search_fields = ('ref', 'message')
+    date_hierarchy = 'created_at'
+    readonly_fields = ('created_at',)
+    change_list_template = 'admin/synclog_changelist.html'
+
+    def has_add_permission(self, request):
+        return False
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom = [path('clear-cache/', self.admin_site.admin_view(self.clear_cache_view),
+                       name='core_synclog_clear_cache')]
+        return custom + urls
+
+    def clear_cache_view(self, request):
+        from django.core.cache import cache
+        from django.contrib import messages
+        from django.shortcuts import redirect
+        cache.clear()
+        messages.success(request, 'Cache PCS vidé. Les prochaines pages seront resynchronisées depuis PCS.')
+        return redirect('admin:core_synclog_changelist')

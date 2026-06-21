@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% load l10n %}
+
+{% block content %}
+<h1 class="mb-1 flex items-center gap-2 text-2xl font-bold"><span class="live-dot animate-pulse"></span> Direct</h1>
+<p class="mb-5 text-sm text-slate-400">{{ today|date:"l d F Y" }}</p>
+
+{% if sessions %}
+<div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+  {% for s in sessions %}
+  <a href="{% url 'live:stage_live' slug=s.stage.race.slug year=s.stage.race.year number=s.stage.number %}"
+     class="card card-pad block hover:border-brand-500/60">
+    <div class="flex items-center justify-between">
+      {% if s.race_status == 'racing' %}<span class="badge-live"><span class="live-dot"></span> LIVE</span>
+      {% else %}<span class="badge-soon">À venir</span>{% endif %}
+      <span class="num text-xs text-slate-500">Étape {{ s.stage.number }}</span>
+    </div>
+    <h3 class="mt-2 text-base">{{ s.stage.race.name }}</h3>
+    <p class="num mt-1 text-xs text-slate-400">{{ s.stage.departure }} → {{ s.stage.arrival }}</p>
+    {% if s.perc %}
+    <div class="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
+      <div class="h-full rounded-full bg-live-500" style="width: {{ s.perc|unlocalize }}%;"></div>
+    </div>
+    <p class="num mt-1 text-xs text-slate-500">{{ s.perc|floatformat:0 }}% · {{ s.km_to_go|floatformat:0 }} km restants</p>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card card-pad text-sm text-slate-400">
+  Aucune course live détectée. Lance <code class="text-slate-300">manage.py live_discover</code> ou attends le worker.
+</div>
+{% endif %}
+{% endblock %}

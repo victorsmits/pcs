@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h1 class="text-2xl font-bold mb-4">Courses</h1>
+<div class="card divide-y divide-ink-700/70">
+  {% for race in races %}
+  <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}" class="flex items-center justify-between px-4 py-3 hover:bg-ink-800">
+    <span>{{ race.name }} <span class="text-slate-500 num text-xs">{{ race.year }}</span></span>
+    <span class="num text-xs text-slate-400">{{ race.start_date|date:"d M Y" }}</span>
+  </a>
+  {% empty %}<p class="px-4 py-3 text-sm text-slate-400">—</p>{% endfor %}
+</div>
+
+{% include 'components/pager.html' %}
+{% endblock %}

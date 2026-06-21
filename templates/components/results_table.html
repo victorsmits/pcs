@@ -1,0 +1,29 @@
+{% comment %}Table de résultats. Contexte : `results` (queryset de Result), `gap_label` (optionnel).{% endcomment %}
+<div class="overflow-x-auto">
+  <table class="table-data">
+    <thead>
+      <tr>
+        <th class="w-10">#</th>
+        <th>Coureur</th>
+        <th class="hidden sm:table-cell">Équipe</th>
+        <th class="text-right">{{ gap_label|default:"Écart" }}</th>
+        <th class="hidden text-right md:table-cell">UCI</th>
+        <th class="hidden text-right md:table-cell">PCS</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td class="num text-slate-400">{% if r.rank %}{{ r.rank }}{% else %}{{ r.get_status_display }}{% endif %}</td>
+        <td><a href="{{ r.rider.get_absolute_url }}" class="hover:text-fg">{{ r.rider.name }}</a></td>
+        <td class="hidden text-slate-400 sm:table-cell">{% if r.team %}<a href="{{ r.team.get_absolute_url }}" class="hover:text-fg">{{ r.team.name }}</a>{% endif %}</td>
+        <td class="num text-right {% if r.rank == 1 %}text-fg{% else %}text-slate-400{% endif %}">{{ r.time_gap|default:"—" }}</td>
+        <td class="num hidden text-right text-slate-500 md:table-cell">{{ r.points_uci|default:"" }}</td>
+        <td class="num hidden text-right text-slate-500 md:table-cell">{{ r.points_pcs|default:"" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-slate-500">Résultats non disponibles.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

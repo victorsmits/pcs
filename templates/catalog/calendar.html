@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="mb-4 flex items-center justify-between gap-3">
+  <h1 class="text-2xl font-bold">{{ month_name }} <span class="num text-slate-500">{{ year }}</span></h1>
+  <div class="flex items-center gap-2">
+    <a href="?year={{ prev.year }}&month={{ prev.month }}" class="btn-ghost" aria-label="Mois précédent">←</a>
+    <a href="{% url 'catalog:calendar' %}" class="btn-ghost text-xs">Aujourd'hui</a>
+    <a href="?year={{ next.year }}&month={{ next.month }}" class="btn-ghost" aria-label="Mois suivant">→</a>
+  </div>
+</div>
+
+{# Vue agenda (mobile) #}
+<div class="space-y-2 sm:hidden">
+  {% for week in weeks %}{% for cell in week %}{% if cell.in_month and cell.races %}
+  <div class="card card-pad {% if cell.is_today %}border-brand-500{% endif %}">
+    <div class="mb-2 text-sm font-semibold {% if cell.is_today %}text-brand-300{% else %}text-slate-300{% endif %}">{{ cell.day }} {{ month_name }}</div>
+    <div class="space-y-1">
+      {% for item in cell.races %}
+      <a href="{{ item.race.get_absolute_url }}" class="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-ink-800">
+        <span class="h-2 w-2 shrink-0 rounded-full
+          {% if item.color == 'uwt' %}bg-accent-500{% elif item.color == 'wwt' %}bg-pink-500
+          {% elif item.color == 'pro' %}bg-brand-500{% elif item.color == 'cont' %}bg-slate-400
+          {% else %}bg-slate-600{% endif %}"></span>
+        <span class="truncate">{{ item.race.name }}</span>
+        <span class="num ml-auto text-xs text-slate-500">{{ item.race.classification }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}{% endfor %}{% endfor %}
+</div>
+
+{# Vue grille (≥ sm) #}
+<div class="hidden sm:block">
+{# En-têtes jours #}
+<div class="mb-1 grid grid-cols-7 gap-1">
+  {% for wd in weekdays %}
+  <div class="px-2 py-1 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">{{ wd }}</div>
+  {% endfor %}
+</div>
+
+{# Grille #}
+<div class="space-y-1">
+  {% for week in weeks %}
+  <div class="grid grid-cols-7 gap-1">
+    {% for cell in week %}
+    <div class="min-h-[5.5rem] rounded-lg border p-1
+                {% if cell.is_today %}border-brand-500 bg-brand-50 dark:bg-brand-900/20{% else %}border-ink-700/60{% endif %}
+                {% if not cell.in_month %}opacity-40{% endif %}">
+      <div class="mb-1 px-1 text-right text-xs {% if cell.is_today %}font-bold text-brand-700 dark:text-brand-300{% else %}text-slate-500{% endif %}">{{ cell.day }}</div>
+      <div class="space-y-0.5">
+        {% for item in cell.races|slice:":4" %}
+        <a href="{{ item.race.get_absolute_url }}" title="{{ item.race.name }}"
+           class="block truncate rounded px-1.5 py-0.5 text-[11px] leading-tight
+             {% if item.color == 'uwt' %}bg-accent-500/20 text-accent-600 dark:text-accent-400
+             {% elif item.color == 'wwt' %}bg-pink-500/20 text-pink-700 dark:text-pink-300
+             {% elif item.color == 'pro' %}bg-brand-500/20 text-brand-700 dark:text-brand-200
+             {% elif item.color == 'cont' %}bg-slate-500/20 text-slate-700 dark:text-slate-300
+             {% else %}bg-ink-700 text-slate-500 dark:text-slate-300{% endif %}">
+          {{ item.race.name }}
+        </a>
+        {% endfor %}
+        {% if cell.races|length > 4 %}
+        <div class="px-1.5 text-[10px] text-slate-500">+{{ cell.races|length|add:"-4" }}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+
+{# /Vue grille #}
+</div>
+
+{# Légende #}
+<div class="mt-4 flex flex-wrap gap-3 text-xs text-slate-500">
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-accent-500/40"></span> WorldTour</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-pink-500/40"></span> Women's WT</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-brand-500/40"></span> ProSeries</span>
+  <span class="flex items-center gap-1"><span class="h-2 w-3 rounded bg-slate-500/40"></span> .1 / .2</span>
+</div>
+{% endblock %}
