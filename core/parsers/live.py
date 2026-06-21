@@ -26,18 +26,26 @@ def live_state_from_data(data):
     status = (data.get('race_status') or 'unknown').lower()
     if status not in ('preview', 'racing', 'finished'):
         status = 'unknown'
+    finished = bool(data.get('finished'))
+    km_done = data.get('kmdone') or 0
+    max_km = data.get('maxkm')
+    km_to_go = data.get('kmtogo')
+    # Avant le départ, PCS renvoie kmtogo=0 → on affiche la distance restante réelle.
+    if not finished and (not km_to_go) and max_km:
+        km_to_go = round(max_km - km_done, 1)
     return {
         'pcs_live_id': data.get('ls_pid'),
         'race_status': status,
-        'km_done': data.get('kmdone'),
-        'km_to_go': data.get('kmtogo'),
-        'max_km': data.get('maxkm'),
+        'km_done': km_done,
+        'km_to_go': km_to_go,
+        'max_km': max_km,
         'perc': data.get('perc'),
         'avg_speed': data.get('avg') or data.get('avg_speed') or 0,
         'min_ele': data.get('min_ele'),
         'max_ele': data.get('max_ele'),
         'started_ts': data.get('started_ts'),
-        'finished': bool(data.get('finished')),
+        'start_time': data.get('start_time_cet') or data.get('start_time') or '',
+        'finished': finished,
     }
 
 

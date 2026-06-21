@@ -18,12 +18,25 @@
         </h1>
         <p class="num mt-1 text-sm text-slate-400">
           {{ stage.departure }} → {{ stage.arrival }}{% if stage.distance %} · {{ stage.distance }} km{% endif %}
+          <span x-show="d.start_time && !d.finished"> · Départ <span x-text="d.start_time"></span></span>
         </p>
       </div>
       <div class="num text-right text-xs text-slate-500" x-show="d.updated_at">
         MAJ <span x-text="updatedAgo"></span>
       </div>
     </div>
+  </div>
+
+  {# Infos étape #}
+  <div class="card card-pad">
+    <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
+      <div x-show="d.start_time && !d.finished"><dt class="text-slate-500">Départ</dt><dd class="num" x-text="d.start_time + ' CET'"></dd></div>
+      {% if stage.distance %}<div><dt class="text-slate-500">Distance</dt><dd class="num">{{ stage.distance }} km</dd></div>{% endif %}
+      {% if stage.vertical_meters %}<div><dt class="text-slate-500">Dénivelé +</dt><dd class="num">{{ stage.vertical_meters }} m</dd></div>{% endif %}
+      {% if stage.profile_score %}<div><dt class="text-slate-500">ProfileScore</dt><dd class="num">{{ stage.profile_score }}</dd></div>{% endif %}
+      {% if stage.get_stage_type_display and stage.stage_type != 'unknown' %}<div><dt class="text-slate-500">Type</dt><dd>{{ stage.get_stage_type_display }}</dd></div>{% endif %}
+      {% if stage.climbs.count %}<div><dt class="text-slate-500">Cols / sprints</dt><dd class="num">{{ stage.climbs.count }}</dd></div>{% endif %}
+    </dl>
   </div>
 
   {# Stats live #}
@@ -130,6 +143,7 @@ function liveStage() {
       km_to_go: {{ session.km_to_go|default:'null' }},
       avg_speed: {{ session.avg_speed|default:'null' }},
       perc: {{ session.perc|default:'null' }},
+      start_time: "{{ session.start_time|default:'' }}",
       groups: [], events: [],
       updated_at: {% if session.last_polled_at %}"{{ session.last_polled_at|date:'c' }}"{% else %}null{% endif %},
     },

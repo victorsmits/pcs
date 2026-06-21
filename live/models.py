@@ -24,6 +24,7 @@ class LiveSession(models.Model):
     min_ele = models.IntegerField(null=True, blank=True)
     max_ele = models.IntegerField(null=True, blank=True)
     started_ts = models.BigIntegerField(null=True, blank=True)
+    start_time = models.CharField(max_length=10, blank=True)  # heure de départ (CET)
     finished = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True, db_index=True,
                                     help_text='Si vrai, le worker poll cette session.')

@@ -62,6 +62,7 @@ def _serialize(session):
         'max_km': session.max_km,
         'perc': session.perc,
         'avg_speed': round(session.avg_speed, 1) if session.avg_speed else 0,
+        'start_time': session.start_time,
         'groups': [
             {'label': g.label, 'gap': g.gap, 'rider_count': g.rider_count,
              'profile_pct': g.profile_pct, 'riders': g.riders}
