@@ -181,9 +181,14 @@ LOGIN_REDIRECT_URL = '/admin/'
 ACCOUNT_EMAIL_VERIFICATION = 'none'
 SOCIALACCOUNT_LOGIN_ON_GET = True          # connexion Google en 1 clic
 SOCIALACCOUNT_ADAPTER = 'core.adapters.AdminSocialAdapter'
+# L'email Google est vérifié → on relie/authentifie directement un compte existant
+# de même email (évite l'écran de création/liaison de compte).
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
 # Emails autorisés à accéder à l'admin (deviennent staff/superuser au login Google)
 ADMIN_EMAILS = [e.strip().lower() for e in
-                os.environ.get('ADMIN_EMAILS', 'victor.smits@shippingbo.com').split(',') if e.strip()]
+                os.environ.get('ADMIN_EMAILS',
+                               'victor.smits@shippingbo.com,smitsvictor97@gmail.com').split(',') if e.strip()]
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
