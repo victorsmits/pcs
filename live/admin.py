@@ -46,10 +46,23 @@ class PushSubscriptionAdmin(admin.ModelAdmin):
     search_fields = ('endpoint', 'user_agent')
     readonly_fields = ('endpoint', 'p256dh', 'auth', 'created_at', 'last_seen')
     inlines = [RaceFollowInline]
+    actions = ('send_test',)
 
     @admin.display(description='Courses suivies')
     def follow_count(self, obj):
         return obj.follows.count()
+
+    @admin.action(description='Envoyer une notification de test')
+    def send_test(self, request, queryset):
+        from live import push
+        if not push.push_enabled():
+            self.message_user(request, 'Push désactivé : clés VAPID manquantes.',
+                              level='error')
+            return
+        sent = push.send_to_subscriptions(
+            queryset, title='Test — PCS Live',
+            body='Notification de test : tout fonctionne ✅', url='/', tag='test')
+        self.message_user(request, f'Notification envoyée à {sent}/{queryset.count()} appareil(s).')
 
 
 @admin.register(RaceFollow)
