@@ -2,9 +2,10 @@
 Les vues seront enrichies en Phase 1 (fetch à la demande, contenus réels)."""
 from datetime import date
 
+from django.core.paginator import Paginator
 from django.db.models import F
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 
 from catalog.models import Race, Stage, Rider, Team, Ranking, Result, ClassificationType
 from catalog import services
@@ -40,6 +41,24 @@ def _race_color(race):
     if c.startswith(('1.1', '2.1')):
         return 'cont'
     return 'other'
+
+
+def race_go_live(request, slug, year):
+    """Redirige vers la page live de l'étape du jour (ou la course si pas d'étape)."""
+    race = get_object_or_404(Race, slug=slug, year=year)
+    if race.is_stage_race:
+        if not race.stages.exists():
+            try:
+                services.sync_race_detail(race)
+            except Exception:  # noqa: BLE001
+                pass
+        today = date.today()
+        stage = (race.stages.filter(date=today).first()
+                 or race.stages.filter(date__lte=today).order_by('-date').first()
+                 or race.stages.order_by('number').first())
+        if stage:
+            return redirect('live:stage_live', slug=slug, year=year, number=stage.number)
+    return redirect('catalog:race_detail', slug=slug, year=year)
 
 
 def calendar(request):
@@ -90,19 +109,25 @@ def calendar(request):
     })
 
 
+def _paginate(request, qs):
+    from django.conf import settings
+    paginator = Paginator(qs, settings.ITEMS_PER_PAGE)
+    return paginator.get_page(request.GET.get('page'))
+
+
 def race_list(request):
-    races = Race.objects.all().order_by('-start_date')[:100]
-    return render(request, 'catalog/race_list.html', {'races': races, 'page_title': 'Courses'})
+    page = _paginate(request, Race.objects.all().order_by('-start_date', 'name'))
+    return render(request, 'catalog/race_list.html', {'races': page, 'page_obj': page, 'page_title': 'Courses'})
 
 
 def rider_list(request):
-    riders = Rider.objects.all().order_by('name')[:100]
-    return render(request, 'catalog/rider_list.html', {'riders': riders, 'page_title': 'Coureurs'})
+    page = _paginate(request, Rider.objects.all().order_by('name'))
+    return render(request, 'catalog/rider_list.html', {'riders': page, 'page_obj': page, 'page_title': 'Coureurs'})
 
 
 def team_list(request):
-    teams = Team.objects.filter(year=date.today().year).order_by('name')
-    return render(request, 'catalog/team_list.html', {'teams': teams, 'page_title': 'Équipes'})
+    page = _paginate(request, Team.objects.filter(year=date.today().year).order_by('name'))
+    return render(request, 'catalog/team_list.html', {'teams': page, 'page_obj': page, 'page_title': 'Équipes'})
 
 
 def rankings(request):

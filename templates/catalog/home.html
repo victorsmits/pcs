@@ -21,7 +21,7 @@
     {% if ongoing %}
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {% for race in ongoing %}
-        <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}"
+        <a href="{% url 'catalog:race_go_live' slug=race.slug year=race.year %}"
            class="card card-pad block hover:border-brand-500/60">
           <div class="flex items-center justify-between">
             <span class="badge-live"><span class="live-dot"></span> LIVE</span>
