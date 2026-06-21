@@ -278,6 +278,52 @@ def sync_team(team, force=False):
     return data
 
 
+def get_race_years(race):
+    """Liste (desc) des années où la course a eu lieu, depuis le sélecteur PCS.
+
+    Mise en cache 7 jours par slug ; repli sur les années présentes en base.
+    """
+    import re
+    from django.core.cache import cache as dj_cache
+    ckey = f'race_years::{race.slug}'
+    cached = dj_cache.get(ckey)
+    if cached is not None:
+        return cached
+
+    years = set()
+    soup = pcs_client.get_soup(f'{pcs_client.PCS_BASE_URL}/race/{race.slug}/{race.year}', cache_ttl=3600)
+    if soup:
+        for sel in soup.find_all('select'):
+            opts = [o.get_text(strip=True) for o in sel.find_all('option')]
+            yrs = [int(o) for o in opts if re.fullmatch(r'(19|20)\d{2}', o or '')]
+            if len(yrs) >= 2:
+                years.update(yrs)
+                break
+    years.update(Race.objects.filter(slug=race.slug).values_list('year', flat=True))
+    result = sorted(years, reverse=True)
+    if result:
+        dj_cache.set(ckey, result, 7 * 86400)
+    return result
+
+
+def ensure_edition(slug, year):
+    """Retourne la Race (slug, year), en la créant + synchronisant si absente."""
+    race = Race.objects.filter(slug=slug, year=year).first()
+    if race:
+        return race
+    race = Race.objects.create(slug=slug, year=year, name=slug.replace('-', ' ').title())
+    try:
+        sync_race_detail(race)
+        if race.is_stage_race:
+            sync_gc(race)
+        else:
+            sync_oneday_result(race)
+        race.refresh_from_db()
+    except Exception:  # noqa: BLE001
+        pass
+    return race
+
+
 def get_past_editions(race, n=6):
     """Éditions précédentes (même slug) avec leur vainqueur — backfill paresseux.
 

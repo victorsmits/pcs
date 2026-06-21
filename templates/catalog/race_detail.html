@@ -11,11 +11,23 @@
         {% if race.is_grand_tour %}<span class="badge bg-accent-500/15 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-500/30">Grand Tour</span>
         {% elif race.is_monument %}<span class="badge bg-accent-500/15 text-accent-600 dark:text-accent-400 ring-1 ring-inset ring-accent-500/30">Monument</span>{% endif %}
       </div>
-      <p class="num mt-1 text-sm text-slate-400">
-        {{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
-        {% if race.classification %} · {{ race.classification }}{% endif %}
-        {% if race.get_category_display %} · {{ race.get_category_display }}{% endif %}
-      </p>
+      <div class="mt-1 flex flex-wrap items-center gap-3">
+        <p class="num text-sm text-slate-400">
+          {{ race.start_date|date:"d M" }} – {{ race.end_date|date:"d M Y" }}
+          {% if race.classification %} · {{ race.classification }}{% endif %}
+          {% if race.get_category_display %} · {{ race.get_category_display }}{% endif %}
+        </p>
+        {% if years|length > 1 %}
+        <select onchange="if(this.value){window.location=this.value}"
+                class="num rounded-lg border border-ink-600 bg-ink-800 px-2 py-1 text-sm text-slate-200
+                       focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                aria-label="Changer d'édition">
+          {% for y in years %}
+          <option value="{% url 'catalog:race_detail' slug=race.slug year=y %}" {% if y == race.year %}selected{% endif %}>Édition {{ y }}</option>
+          {% endfor %}
+        </select>
+        {% endif %}
+      </div>
     </div>
     <div class="flex items-center gap-2">
       <a href="{% url 'catalog:startlist' slug=race.slug year=race.year %}" class="btn-ghost">Engagés</a>

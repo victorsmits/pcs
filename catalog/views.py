@@ -148,7 +148,14 @@ def rankings(request):
 
 
 def race_detail(request, slug, year):
-    race = get_object_or_404(Race, slug=slug, year=year)
+    race = Race.objects.filter(slug=slug, year=year).first()
+    if not race:
+        # Édition absente : on la crée si la course existe pour une autre année
+        if Race.objects.filter(slug=slug).exists():
+            race = services.ensure_edition(slug, year)
+        else:
+            from django.http import Http404
+            raise Http404('Course introuvable')
     if not race.detail_synced_at:
         try:
             services.sync_race_detail(race)
@@ -188,10 +195,15 @@ def race_detail(request, slug, year):
         oneday = (Result.objects.filter(race=race, stage__isnull=True)
                   .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
 
+    try:
+        years = services.get_race_years(race)
+    except Exception:  # noqa: BLE001
+        years = [race.year]
+
     return render(request, 'catalog/race_detail.html', {
         'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday,
         'gc_provisional': gc_provisional, 'ongoing_today': is_ongoing,
-        'jersey_riders': jersey_riders, 'page_title': str(race),
+        'jersey_riders': jersey_riders, 'years': years, 'page_title': str(race),
     })
 
 
