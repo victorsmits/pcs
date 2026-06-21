@@ -418,6 +418,29 @@ def get_jersey_wearers(race):
     return []
 
 
+def backfill_profile_scale(stage, force=False):
+    """Calcule min/max altitude (échelle) d'un profil image déjà extrait.
+
+    Cible les étapes qui ont une silhouette extraite de l'image mais pas
+    encore d'échelle chiffrée (min/max None). Renvoie True si l'échelle a
+    été renseignée. Sans Tesseract / OCR illisible : ne fait rien (False).
+    """
+    if not stage.profile_image_url:
+        return False
+    if not force and stage.min_elevation is not None and stage.max_elevation is not None:
+        return False
+    from core.profile_from_image import estimate_elevation_range
+    img = pcs_client.fetch_bytes(stage.profile_image_url, cache_ttl=7 * 86400)
+    if not img:
+        return False
+    lo, hi = estimate_elevation_range(img)
+    if lo is None:
+        return False
+    stage.min_elevation, stage.max_elevation = lo, hi
+    stage.save(update_fields=['min_elevation', 'max_elevation'])
+    return True
+
+
 def backfill_profile_from_image(stage):
     """Reconstruit elevation_points depuis l'image JPG (étape déjà synchro sans profil)."""
     if stage.elevation_points or not stage.profile_image_url:

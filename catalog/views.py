@@ -291,6 +291,12 @@ def stage_detail(request, slug, year, number):
             services.backfill_profile_from_image(stage)
         except Exception:  # noqa: BLE001
             pass
+    # Profil image déjà extrait mais sans échelle chiffrée → on tente l'OCR de l'axe (une fois)
+    elif stage.profile_from_image and stage.min_elevation is None and stage.profile_image_url:
+        try:
+            services.backfill_profile_scale(stage)
+        except Exception:  # noqa: BLE001
+            pass
     climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
     profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
                                 stage.max_elevation, stage.distance, climbs=climbs)
