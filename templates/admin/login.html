@@ -1,0 +1,13 @@
+{% extends "admin/login.html" %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem; text-align: center;">
+  <a href="{% url 'google_login' %}?next=/admin/"
+     style="display:block; padding:10px 16px; border-radius:8px; background:#1a73e8;
+            color:#fff; font-weight:600; text-decoration:none;">
+    Se connecter avec Google
+  </a>
+  <p style="margin-top:.75rem; color:#999; font-size:.8rem;">ou via identifiants&nbsp;:</p>
+</div>
+{{ block.super }}
+{% endblock %}

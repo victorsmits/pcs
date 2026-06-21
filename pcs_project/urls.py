@@ -9,6 +9,7 @@ register_converter(PCSSlugConverter, 'pcsslug')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('allauth.urls')),
     path('api/', include('live.api_urls')),
     path('live/', include('live.urls')),
     path('', include('catalog.urls')),

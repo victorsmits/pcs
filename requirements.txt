@@ -18,6 +18,11 @@ redis>=5.0
 django-celery-beat>=2.6       # admin-editable periodic schedules
 django-celery-results>=2.5    # task results visible in admin
 
+# --- Auth (login admin via Google) ---
+django-allauth>=65,<66
+PyJWT>=2.8
+cryptography>=42
+
 # --- Utilities ---
 Pillow>=10.0
 django-extensions>=3.2

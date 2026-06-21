@@ -22,15 +22,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django.contrib.sites',
     # Third-party
     'django_extensions',
     'django_celery_beat',
     'django_celery_results',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
     # Local apps
     'core',
     'catalog',
     'live',
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -41,6 +48,12 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 ROOT_URLCONF = 'pcs_project.urls'
@@ -160,6 +173,28 @@ PCS_LIVE_POLL_INTERVAL = int(os.environ.get('PCS_LIVE_POLL_INTERVAL', '15'))  # 
 # ---------------------------------------------------------------------------
 ITEMS_PER_PAGE = 50
 CURRENT_SEASON = int(os.environ.get('CURRENT_SEASON', '2026'))
+
+# ---------------------------------------------------------------------------
+# Authentification Google (accès admin via allauth)
+# ---------------------------------------------------------------------------
+LOGIN_REDIRECT_URL = '/admin/'
+ACCOUNT_EMAIL_VERIFICATION = 'none'
+SOCIALACCOUNT_LOGIN_ON_GET = True          # connexion Google en 1 clic
+SOCIALACCOUNT_ADAPTER = 'core.adapters.AdminSocialAdapter'
+# Emails autorisés à accéder à l'admin (deviennent staff/superuser au login Google)
+ADMIN_EMAILS = [e.strip().lower() for e in
+                os.environ.get('ADMIN_EMAILS', 'victor.smits@shippingbo.com').split(',') if e.strip()]
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+            'key': '',
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    }
+}
 
 # Reverse proxy externe
 USE_X_FORWARDED_HOST = True
