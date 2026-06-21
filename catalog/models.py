@@ -294,19 +294,6 @@ class Result(models.Model):
         return f'{self.rank}. {self.rider} ({self.classification})'
 
 
-class JerseyWearer(models.Model):
-    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, related_name='jerseys')
-    classification = models.CharField(max_length=10, choices=ClassificationType.choices)
-    rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name='jerseys_worn')
-
-    class Meta:
-        verbose_name = 'Porteur de maillot'
-        unique_together = [('stage', 'classification')]
-
-    def __str__(self):
-        return f'{self.classification}: {self.rider} ({self.stage})'
-
-
 class Ranking(models.Model):
     class Kind(models.TextChoices):
         PCS = 'pcs', 'PCS'

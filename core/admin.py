@@ -36,6 +36,26 @@ except Exception:  # noqa: BLE001 — django_celery_beat absent
     pass
 
 
+# --- Désencombrement : on retire de l'admin les modèles tiers inutiles ici ---
+def _unregister(label, model):
+    try:
+        from django.apps import apps
+        admin.site.unregister(apps.get_model(label, model))
+    except Exception:  # noqa: BLE001
+        pass
+
+
+for _lbl, _mdl in [
+    ('sites', 'Site'),
+    ('socialaccount', 'SocialApp'),      # identifiants via variables d'env, pas la BDD
+    ('socialaccount', 'SocialToken'),
+    ('django_celery_beat', 'ClockedSchedule'),
+    ('django_celery_beat', 'SolarSchedule'),
+    ('django_celery_results', 'GroupResult'),
+]:
+    _unregister(_lbl, _mdl)
+
+
 @admin.register(SyncLog)
 class SyncLogAdmin(admin.ModelAdmin):
     list_display = ('created_at', 'entity_type', 'ref', 'status', 'duration_ms')

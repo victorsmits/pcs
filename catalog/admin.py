@@ -53,7 +53,6 @@ class ResultAdmin(admin.ModelAdmin):
 admin.site.register(models.Climb)
 admin.site.register(models.Membership)
 admin.site.register(models.StartListEntry)
-admin.site.register(models.JerseyWearer)
 admin.site.register(models.Ranking)
 
 admin.site.site_header = 'PCS Live — Administration'
