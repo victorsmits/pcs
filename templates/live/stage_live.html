@@ -7,7 +7,7 @@
   {# En-tête #}
   <div>
     <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}"
-       class="text-sm text-slate-400 hover:text-white">&larr; {{ race.name }} {{ race.year }}</a>
+       class="text-sm text-slate-400 hover:text-fg">&larr; {{ race.name }} {{ race.year }}</a>
     <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="flex items-center gap-3 text-2xl font-bold">
@@ -29,13 +29,13 @@
   {# Stats live #}
   <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
     <div class="card card-pad"><div class="text-xs text-slate-500">Km parcourus</div>
-      <div class="num text-xl font-semibold text-white" x-text="fmt(d.km_done)"></div></div>
+      <div class="num text-xl font-semibold text-fg" x-text="fmt(d.km_done)"></div></div>
     <div class="card card-pad"><div class="text-xs text-slate-500">Km restants</div>
-      <div class="num text-xl font-semibold text-white" x-text="fmt(d.km_to_go)"></div></div>
+      <div class="num text-xl font-semibold text-fg" x-text="fmt(d.km_to_go)"></div></div>
     <div class="card card-pad"><div class="text-xs text-slate-500">Vitesse moy.</div>
-      <div class="num text-xl font-semibold text-white"><span x-text="fmt(d.avg_speed)"></span> <span class="text-sm text-slate-500">km/h</span></div></div>
+      <div class="num text-xl font-semibold text-fg"><span x-text="fmt(d.avg_speed)"></span> <span class="text-sm text-slate-500">km/h</span></div></div>
     <div class="card card-pad"><div class="text-xs text-slate-500">Progression</div>
-      <div class="num text-xl font-semibold text-white"><span x-text="Math.round(d.perc||0)"></span>%</div></div>
+      <div class="num text-xl font-semibold text-fg"><span x-text="Math.round(d.perc||0)"></span>%</div></div>
   </div>
 
   {# Profil + progression #}
@@ -70,7 +70,7 @@
         <div class="rounded-lg border border-ink-700/70 px-3 py-2"
              :class="k.passed ? 'opacity-40' : 'bg-ink-800'">
           <div class="flex items-center gap-2">
-            <span class="text-sm font-medium text-white" x-text="k.name"></span>
+            <span class="text-sm font-medium text-fg" x-text="k.name"></span>
             <span class="num text-xs text-accent-400" x-show="k.category" x-text="k.category"></span>
           </div>
           <div class="num text-xs text-slate-500">
@@ -90,7 +90,7 @@
         <template x-for="g in d.groups" :key="g.label">
           <div class="rounded-lg border border-ink-700/70 bg-ink-800 p-3">
             <div class="flex items-center justify-between">
-              <span class="font-medium text-white" x-text="g.label"></span>
+              <span class="font-medium text-fg" x-text="g.label"></span>
               <span class="num text-sm text-accent-400" x-text="g.gap"></span>
             </div>
             <div class="num mt-1 text-xs text-slate-500"><span x-text="g.rider_count"></span> coureur(s)</div>

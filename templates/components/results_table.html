@@ -15,9 +15,9 @@
       {% for r in results %}
       <tr>
         <td class="num text-slate-400">{% if r.rank %}{{ r.rank }}{% else %}{{ r.get_status_display }}{% endif %}</td>
-        <td><a href="{{ r.rider.get_absolute_url }}" class="hover:text-white">{{ r.rider.name }}</a></td>
-        <td class="hidden text-slate-400 sm:table-cell">{% if r.team %}<a href="{{ r.team.get_absolute_url }}" class="hover:text-white">{{ r.team.name }}</a>{% endif %}</td>
-        <td class="num text-right {% if r.rank == 1 %}text-white{% else %}text-slate-400{% endif %}">{{ r.time_gap|default:"—" }}</td>
+        <td><a href="{{ r.rider.get_absolute_url }}" class="hover:text-fg">{{ r.rider.name }}</a></td>
+        <td class="hidden text-slate-400 sm:table-cell">{% if r.team %}<a href="{{ r.team.get_absolute_url }}" class="hover:text-fg">{{ r.team.name }}</a>{% endif %}</td>
+        <td class="num text-right {% if r.rank == 1 %}text-fg{% else %}text-slate-400{% endif %}">{{ r.time_gap|default:"—" }}</td>
         <td class="num hidden text-right text-slate-500 md:table-cell">{{ r.points_uci|default:"" }}</td>
         <td class="num hidden text-right text-slate-500 md:table-cell">{{ r.points_pcs|default:"" }}</td>
       </tr>

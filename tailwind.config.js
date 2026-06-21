@@ -22,11 +22,25 @@ module.exports = {
         live: {
           500: '#ef4444', 600: '#dc2626',
         },
-        // Fonds slate (dark OLED)
+        // Fonds (surfaces) — pilotés par variables CSS pour le thème clair/sombre
         ink: {
-          900: '#0b0f17', 850: '#0f1422', 800: '#131a2a', 700: '#1c2438',
-          600: '#28324a', 500: '#3a4661',
+          900: 'rgb(var(--ink-900) / <alpha-value>)',
+          850: 'rgb(var(--ink-850) / <alpha-value>)',
+          800: 'rgb(var(--ink-800) / <alpha-value>)',
+          700: 'rgb(var(--ink-700) / <alpha-value>)',
+          600: 'rgb(var(--ink-600) / <alpha-value>)',
+          500: 'rgb(var(--ink-500) / <alpha-value>)',
         },
+        // Nuances de texte — pilotées par variables (basculent en thème clair)
+        slate: {
+          200: 'rgb(var(--sl-200) / <alpha-value>)',
+          300: 'rgb(var(--sl-300) / <alpha-value>)',
+          400: 'rgb(var(--sl-400) / <alpha-value>)',
+          500: 'rgb(var(--sl-500) / <alpha-value>)',
+          600: 'rgb(var(--sl-600) / <alpha-value>)',
+        },
+        // Texte principal (remplace text-white sur surfaces)
+        fg: 'rgb(var(--fg) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['"Fira Sans"', 'system-ui', 'sans-serif'],

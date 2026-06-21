@@ -75,8 +75,8 @@
     <div x-show="!loading && editions.length" class="divide-y divide-ink-700/70">
       <template x-for="e in editions" :key="e.year">
         <div class="flex items-center justify-between py-2">
-          <a :href="e.url" class="num text-slate-400 hover:text-white" x-text="e.year"></a>
-          <a :href="e.winner_url" class="text-sm hover:text-white" x-text="e.winner"></a>
+          <a :href="e.url" class="num text-slate-400 hover:text-fg" x-text="e.year"></a>
+          <a :href="e.winner_url" class="text-sm hover:text-fg" x-text="e.winner"></a>
         </div>
       </template>
     </div>

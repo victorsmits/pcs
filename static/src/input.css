@@ -3,6 +3,24 @@
 @tailwind utilities;
 
 @layer base {
+  /* Thème sombre (par défaut) */
+  :root {
+    --ink-900: 11 15 23;   --ink-850: 15 20 34;  --ink-800: 19 26 42;
+    --ink-700: 28 36 56;   --ink-600: 40 50 74;  --ink-500: 58 70 97;
+    --sl-200: 226 232 240; --sl-300: 203 213 225; --sl-400: 148 163 184;
+    --sl-500: 100 116 139; --sl-600: 71 85 105;
+    --fg: 255 255 255;
+    color-scheme: dark;
+  }
+  /* Thème clair */
+  .light {
+    --ink-900: 248 250 252; --ink-850: 255 255 255; --ink-800: 241 245 249;
+    --ink-700: 226 232 240; --ink-600: 203 213 225; --ink-500: 148 163 184;
+    --sl-200: 15 23 42;     --sl-300: 30 41 59;     --sl-400: 71 85 105;
+    --sl-500: 100 116 139;  --sl-600: 148 163 184;
+    --fg: 15 23 42;
+    color-scheme: light;
+  }
   html {
     @apply bg-ink-900 text-slate-200;
   }
@@ -10,7 +28,7 @@
     @apply font-sans antialiased;
   }
   h1, h2, h3, h4 {
-    @apply font-semibold tracking-tight text-white;
+    @apply font-semibold tracking-tight text-fg;
   }
   /* Chiffres tabulaires (temps, écarts, km) */
   .num {
@@ -20,6 +38,10 @@
     @apply transition-colors duration-200;
   }
   [x-cloak] { display: none !important; }
+  /* Bascule des icônes de thème */
+  .theme-moon { display: none; }
+  .light .theme-sun { display: none; }
+  .light .theme-moon { display: block; }
 }
 
 @layer components {
