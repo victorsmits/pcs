@@ -379,9 +379,39 @@ def backfill_profile_from_image(stage):
     pts = extract_elevation_from_image(img)
     if pts:
         stage.elevation_points = pts
-        stage.save(update_fields=['elevation_points'])
+        stage.profile_from_image = True
+        stage.save(update_fields=['elevation_points', 'profile_from_image'])
         return True
     return False
+
+
+def resync_image_profiles(limit=20, window_days=60):
+    """Repasse sur les étapes en profil-image dont la course est proche et tente
+    de récupérer le profil vectoriel (cols + altitude) désormais publié par PCS.
+
+    Renvoie {'checked', 'upgraded'}.
+    """
+    from datetime import date as _date, timedelta as _td
+    today = _date.today()
+    stages = (Stage.objects.filter(
+        profile_from_image=True,
+        race__start_date__lte=today + _td(days=window_days),
+        race__end_date__gte=today - _td(days=3),
+    ).select_related('race').order_by('race__start_date')[:limit])
+
+    checked = upgraded = 0
+    for stage in stages:
+        checked += 1
+        try:
+            sync_stage_detail(stage, force=True)
+            stage.refresh_from_db()
+            if not stage.profile_from_image:
+                upgraded += 1
+        except Exception:  # noqa: BLE001
+            continue
+    if checked:
+        _log('resync', 'image_profiles', SyncLog.Status.OK, f'{upgraded}/{checked} upgradés')
+    return {'checked': checked, 'upgraded': upgraded}
 
 
 def sync_oneday_result(race, force=False):
@@ -488,6 +518,7 @@ def sync_stage_detail(stage, force=False):
         points = extract_elevation_points(live_html)
         if points:
             stage.elevation_points = points
+            stage.profile_from_image = False
         ldata = parse_live_data(live_html)
         if ldata:
             if ldata.get('min_ele') is not None:
@@ -518,6 +549,7 @@ def sync_stage_detail(stage, force=False):
             pts = extract_elevation_from_image(img)
             if pts:
                 stage.elevation_points = pts
+                stage.profile_from_image = True
 
     stage.detail_synced_at = timezone.now()
     stage.save()

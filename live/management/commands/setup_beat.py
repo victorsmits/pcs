@@ -15,6 +15,9 @@ class Command(BaseCommand):
         # Intervalle 10min pour la découverte
         disc_iv, _ = IntervalSchedule.objects.get_or_create(
             every=10, period=IntervalSchedule.MINUTES)
+        # Intervalle 6h pour l'upgrade des profils-image
+        prof_iv, _ = IntervalSchedule.objects.get_or_create(
+            every=6, period=IntervalSchedule.HOURS)
         # Cron quotidien pour le calendrier (04:00)
         cal_cron, _ = CrontabSchedule.objects.get_or_create(
             minute='0', hour='4', day_of_week='*', day_of_month='*', month_of_year='*')
@@ -23,6 +26,7 @@ class Command(BaseCommand):
             ('live: poll sessions actives', 'live.tasks.poll_active_sessions', {'interval': poll_iv}),
             ('live: découverte du jour', 'live.tasks.discover_today', {'interval': disc_iv}),
             ('catalog: sync calendrier', 'catalog.tasks.sync_calendar_year', {'crontab': cal_cron}),
+            ('catalog: upgrade profils image', 'catalog.tasks.resync_image_profiles', {'interval': prof_iv}),
         ]
         for name, task, sched in tasks:
             PeriodicTask.objects.update_or_create(

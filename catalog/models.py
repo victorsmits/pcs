@@ -198,6 +198,9 @@ class Stage(models.Model):
     max_elevation = models.IntegerField(null=True, blank=True)
     # Points d'altitude (x%, y%) extraits du clip-path PCS → régénération SVG
     elevation_points = models.JSONField(default=list, blank=True)
+    # True si le profil a été reconstruit depuis l'image (à upgrader en vectoriel
+    # dès que PCS publie le polygone / les cols).
+    profile_from_image = models.BooleanField(default=False)
     winner = models.ForeignKey(
         Rider, on_delete=models.SET_NULL, null=True, blank=True, related_name='stage_wins'
     )
