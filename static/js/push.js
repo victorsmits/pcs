@@ -44,7 +44,7 @@
     return sub;
   }
 
-  window.raceFollow = function (slug, year) {
+  function raceFollow(slug, year) {
     return {
       slug: slug,
       year: year,
@@ -95,5 +95,13 @@
         this.busy = false;
       },
     };
-  };
+  }
+
+  // Enregistrement Alpine : push.js étant chargé AVANT Alpine, le listener
+  // alpine:init est posé à temps → composant dispo dès le démarrage d'Alpine.
+  document.addEventListener('alpine:init', function () {
+    if (window.Alpine) window.Alpine.data('raceFollow', raceFollow);
+  });
+  // Repli global (au cas où l'ordre de chargement changerait).
+  window.raceFollow = raceFollow;
 })();
