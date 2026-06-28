@@ -34,7 +34,7 @@ CIRCUITS = {
     'nc': ('23', 'National Championships', Category.ME),
 }
 # Périmètre par défaut : grandes courses H/F. 'all' = tous les circuits ci-dessus.
-DEFAULT_CIRCUITS = ['wt', 'pro', 'wwt', 'we']
+DEFAULT_CIRCUITS = ['wt', 'pro', 'wwt', 'we', 'nc']
 
 
 def _log(entity_type, ref, status, message='', duration_ms=None):
