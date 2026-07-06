@@ -1,6 +1,19 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 
-from catalog import models
+from catalog import models, services
+
+
+@admin.action(description='Re-synchro détail (force)')
+def resync_stage_detail(modeladmin, request, queryset):
+    ok = 0
+    for stage in queryset:
+        try:
+            services.sync_stage_detail(stage, force=True)
+            ok += 1
+        except Exception as e:
+            modeladmin.message_user(request, f'Erreur {stage} : {e}', messages.ERROR)
+    if ok:
+        modeladmin.message_user(request, f'{ok} étape(s) re-synchronisée(s).', messages.SUCCESS)
 
 
 class StageInline(admin.TabularInline):
@@ -22,10 +35,11 @@ class RaceAdmin(admin.ModelAdmin):
 
 @admin.register(models.Stage)
 class StageAdmin(admin.ModelAdmin):
-    list_display = ('race', 'number', 'date', 'departure', 'arrival', 'stage_type', 'winner')
+    list_display = ('race', 'number', 'date', 'departure', 'arrival', 'distance', 'stage_type', 'winner')
     list_filter = ('stage_type', 'date')
     search_fields = ('race__name', 'departure', 'arrival')
     raw_id_fields = ('race', 'winner', 'winner_team')
+    actions = [resync_stage_detail]
 
 
 @admin.register(models.Rider)
