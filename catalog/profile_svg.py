@@ -19,7 +19,7 @@ def build_profile_svg(elevation_points, min_ele=None, max_ele=None, max_km=None,
     if not elevation_points:
         return None
 
-    # Estimation de max_km depuis les cols si absent
+    # Si max_km absent, on l'estime depuis le km du dernier checkpoint connu.
     effective_max_km = max_km
     if not effective_max_km and climbs:
         kms = [c.get('km') for c in climbs if c.get('km') is not None]
