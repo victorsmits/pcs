@@ -73,7 +73,7 @@ def _serialize(session):
             for g in session.groups.all()
         ],
         'events': [
-            {'seqnr': e.seqnr, 'marker': e.marker, 'text': e.text}
+            {'seqnr': e.seqnr, 'marker': e.marker, 'text': e.text, 'html': e.html}
             for e in session.events.all()[:40]
         ],
         'keypoints': _upcoming_keypoints(session),
