@@ -44,6 +44,9 @@ Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs`
         {% for c in profile.climbs %}
         <div class="pointer-events-none absolute top-0 h-full" style="left: {{ c.left_pct }}%;">
           <div class="h-full w-px bg-accent-500/40"></div>
+          {% if c.category %}
+          <div class="absolute top-1 left-1 rounded bg-accent-700/80 px-1 text-[8px] font-bold leading-tight text-white">{{ c.category }}</div>
+          {% endif %}
         </div>
         {% endfor %}
 
