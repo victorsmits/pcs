@@ -49,13 +49,20 @@ def build_profile_svg(elevation_points, min_ele=None, max_ele=None, max_km=None,
                             'label': f'{int(km)}'})
             km += step
 
+    # Si max_km absent, on l'estime depuis le km du dernier checkpoint connu.
+    effective_max_km = max_km
+    if not effective_max_km and climbs:
+        kms = [c.get('km') for c in climbs if c.get('km') is not None]
+        if kms:
+            effective_max_km = max(kms)
+
     climb_markers = []
     for c in (climbs or []):
         km = c.get('km')
-        if km is None or not max_km:
+        if km is None or not effective_max_km:
             continue
         climb_markers.append({
-            'left_pct': round(km / max_km * 100, 1),
+            'left_pct': round(km / effective_max_km * 100, 1),
             'name': c.get('name', ''),
             'category': c.get('category', ''),
         })

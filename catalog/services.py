@@ -629,7 +629,7 @@ def sync_stage_detail(stage, force=False):
                 stage.min_elevation = int(ldata['min_ele'])
             if ldata.get('max_ele') is not None:
                 stage.max_elevation = int(ldata['max_ele'])
-            if not stage.distance and ldata.get('maxkm'):
+            if ldata.get('maxkm'):
                 stage.distance = ldata['maxkm']
             # Cols / points clés
             keypoints = keypoints_from_data(ldata)
