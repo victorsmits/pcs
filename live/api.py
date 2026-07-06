@@ -36,6 +36,8 @@ def _upcoming_keypoints(session):
     km_done = session.km_done or 0
     out = []
     for kp in data.get('keypoints', []) or []:
+        if kp.get('type') not in (1, 2):
+            continue
         km = kp.get('km')
         if km is None:
             continue
@@ -52,7 +54,7 @@ def _upcoming_keypoints(session):
             'passed': to_go < 0,
         })
     out.sort(key=lambda k: k['km'])
-    return out[:8]
+    return out[:15]
 
 
 def _serialize(session):
