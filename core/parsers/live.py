@@ -96,7 +96,7 @@ def keypoints_from_data(data):
     out = []
     max_km = data.get('maxkm')
     for kp in data.get('keypoints', []) or []:
-        if kp.get('type') not in (_KP_CLIMB, _KP_SPRINT):
+        if kp.get('type') in (6, 9):  # villes / frontières
             continue
         km = kp.get('km')
         out.append({

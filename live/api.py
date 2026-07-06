@@ -36,7 +36,7 @@ def _upcoming_keypoints(session):
     km_done = session.km_done or 0
     out = []
     for kp in data.get('keypoints', []) or []:
-        if kp.get('type') not in (1, 2):
+        if kp.get('type') in (6, 9):  # villes / frontières
             continue
         km = kp.get('km')
         if km is None:
