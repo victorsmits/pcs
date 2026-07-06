@@ -110,8 +110,8 @@
               <span class="num text-sm text-accent-600 dark:text-accent-400" x-text="g.gap"></span>
             </div>
             <div class="num mt-1 text-xs text-slate-500"><span x-text="g.rider_count"></span> coureur(s)</div>
-            <div class="mt-1 text-xs text-slate-400" x-show="g.riders && g.riders.length"
-                 x-text="g.riders.map(r=>r.name).slice(0,8).join(', ')"></div>
+            <div class="mt-2 space-y-0.5" x-show="g.riders && g.riders.length"
+                 x-html="g.riders.slice(0,8).map(r => `<div class='text-xs text-slate-400'><span class='mr-1 text-slate-600'>—</span><a href='/rider/${r.slug}' class='hover:text-fg hover:underline'>${r.name}</a></div>`).join('')"></div>
           </div>
         </template>
         <p class="text-sm text-slate-500" x-show="!d.groups || !d.groups.length">Pas encore de situation.</p>
@@ -125,7 +125,8 @@
         <template x-for="e in d.events" :key="e.seqnr">
           <li class="flex gap-3">
             <span class="num mt-0.5 inline-flex h-6 min-w-[2rem] items-center justify-center rounded bg-ink-700 px-1.5 text-xs text-slate-300" x-text="e.marker"></span>
-            <span class="text-sm text-slate-300" x-text="e.text"></span>
+            <span class="text-sm text-slate-300 [&_a]:text-accent-400 [&_a]:hover:underline"
+                  x-html="riderLinks(e.html) || e.text"></span>
           </li>
         </template>
         <p class="text-sm text-slate-500" x-show="!d.events || !d.events.length">Pas encore d'événements.</p>
@@ -153,6 +154,10 @@ function liveStage() {
     updatedAgo: "",
     timer: null,
     fmt(v) { return (v===null||v===undefined) ? '—' : (Math.round(v*10)/10); },
+    riderLinks(html) {
+      if (!html) return '';
+      return html.replace(/href="(?:https?:\/\/(?:www\.)?procyclingstats\.com)?\/rider\/([^"]+)"/g, 'href="/rider/$1"');
+    },
     async refresh() {
       try {
         const r = await fetch(this.DATA_URL, {headers: {'X-Requested-With':'XMLHttpRequest'}});
