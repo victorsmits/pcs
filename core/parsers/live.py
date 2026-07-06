@@ -83,11 +83,21 @@ def live_state_from_data(data):
     }
 
 
+_KP_CLIMB = 1   # col catégorisé
+_KP_SPRINT = 2  # sprint intermédiaire
+
+
 def keypoints_from_data(data):
-    """Liste des points clés (cols/sprints) depuis data['keypoints']."""
+    """Liste des points clés (cols/sprints) depuis data['keypoints'].
+
+    Seuls type=1 (col) et type=2 (sprint) sont retenus.
+    Les type=6 (villes) et type=9 (frontières) sont ignorés.
+    """
     out = []
     max_km = data.get('maxkm')
     for kp in data.get('keypoints', []) or []:
+        if kp.get('type') not in (_KP_CLIMB, _KP_SPRINT):
+            continue
         km = kp.get('km')
         out.append({
             'name': kp.get('title') or '',
