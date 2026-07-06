@@ -8,6 +8,40 @@ from core.parsers.common import slug_from_href
 
 _DATA_RE = re.compile(r'var data = (\{.*?\});', re.DOTALL)
 _GAP_RE = re.compile(r'\+\d+:\d+')
+_TIMER_RE = re.compile(r'\b\d+[smh]\b')  # "9s", "2m", "1h" → timers PCS à supprimer
+
+
+def _clean_event_html(cont):
+    """Reconstruit un HTML propre depuis .cont PCS : texte + liens coureurs.
+
+    Supprime les timers PCS (9s, 2m…) et les balises parasites,
+    garde uniquement le texte et les <a href="rider/..."> .
+    """
+    if not cont:
+        return ''
+    from bs4 import NavigableString, Tag
+
+    parts = []
+
+    def walk(node):
+        if isinstance(node, NavigableString):
+            t = str(node)
+            if t.strip():
+                parts.append(t)
+        elif isinstance(node, Tag):
+            if node.name == 'a' and 'rider/' in (node.get('href') or ''):
+                parts.append(str(node))
+            elif node.name == 'br':
+                parts.append(' ')
+            else:
+                for child in node.children:
+                    walk(child)
+
+    walk(cont)
+    raw = ''.join(parts)
+    # Supprime les timers PCS standalone ("9s", "2m"…) entourés d'espaces
+    raw = _TIMER_RE.sub('', raw)
+    return re.sub(r' {2,}', ' ', raw).strip()
 
 
 def parse_live_data(html):
@@ -114,7 +148,7 @@ def parse_timeline(soup, limit=60):
             'seqnr': int(seqnr) if seqnr and seqnr.isdigit() else None,
             'marker': marker[:40],
             'text': text[:500],
-            'html': (str(cont) if cont else '')[:3000],
+            'html': _clean_event_html(cont)[:3000],
         })
     return events
 
