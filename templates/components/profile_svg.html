@@ -19,7 +19,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
     <canvas id="elevChart" class="block w-full h-full"></canvas>
 
     {# Bouton reset zoom (toujours visible, actif seulement si zoomé) #}
-    <button onclick="window.__elevChart&&window.__elevChart.resetZoom()"
+    <button onclick="const c=window.__elevChart;if(c){c.resetZoom();window.__elevRepos&&window.__elevRepos();}"
             class="absolute top-2 right-2 rounded bg-black/50 px-2 py-0.5 text-[11px]
                    text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
             title="Réinitialiser le zoom (double-clic aussi)">↺</button>
@@ -163,11 +163,16 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
         legend: { display: false },
         tooltip: { enabled: false },
         zoom: {
-          pan: { enabled: true, mode: 'x' },
+          pan: {
+            enabled: true,
+            mode: 'x',
+            onPanComplete({ chart }) { _repos(chart); },
+          },
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
             mode: 'x',
+            onZoomComplete({ chart }) { _repos(chart); },
           },
         },
         annotation: { annotations },
@@ -176,28 +181,30 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   });
 
   window.__elevChart = chart;
+  window.__elevRepos = () => _repos(chart);
 
-  canvas.addEventListener('dblclick', () => chart.resetZoom());
-  canvas.style.cursor = 'zoom-in';
-  canvas.addEventListener('chartjs:zoom', () => { canvas.style.cursor = 'grab'; });
-
-  // Positionner les labels de cols sous le graphique
-  const labelsDiv = document.getElementById('elevLabels');
-  if (labelsDiv) {
-    // Attendre que Chart.js ait calculé chartArea
-    requestAnimationFrame(() => {
-      const ca = chart.chartArea;
-      if (!ca) return;
-      const plotW = ca.right - ca.left;
-      labelsDiv.style.marginLeft = ca.left + 'px';
-      labelsDiv.querySelectorAll('[data-km]').forEach(el => {
-        const km = parseFloat(el.dataset.km);
-        const x = maxKm ? km / maxKm * plotW : km / 100 * plotW;
-        el.style.left = x + 'px';
-        el.style.visibility = 'visible';
-      });
+  // Repositionne les labels de cols en fonction de la vue courante
+  function _repos(ch) {
+    const labelsDiv = document.getElementById('elevLabels');
+    if (!labelsDiv) return;
+    const ca = ch.chartArea;
+    if (!ca) return;
+    labelsDiv.style.marginLeft = ca.left + 'px';
+    labelsDiv.style.width = (ca.right - ca.left) + 'px';
+    labelsDiv.querySelectorAll('[data-km]').forEach(el => {
+      const km = parseFloat(el.dataset.km);
+      const px = ch.scales.x.getPixelForValue(km) - ca.left;
+      const visible = px >= -20 && px <= (ca.right - ca.left) + 20;
+      el.style.left = px + 'px';
+      el.style.visibility = visible ? 'visible' : 'hidden';
     });
   }
+
+  canvas.addEventListener('dblclick', () => { chart.resetZoom(); _repos(chart); });
+  canvas.style.cursor = 'zoom-in';
+
+  // Positionnement initial (après le premier rendu)
+  requestAnimationFrame(() => _repos(chart));
 })();
 </script>
 
