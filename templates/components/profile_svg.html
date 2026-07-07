@@ -34,7 +34,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
            @touchstart.prevent="touchStart($event)"
            @touchmove.prevent="touchMove($event)"
            @touchend="touchEnd()"
-           :class="dragging ? 'cursor-grabbing' : (zoomed ? 'cursor-grab' : 'cursor-zoom-in')">
+           :class="dragging ? 'cursor-grabbing' : (vw < 970 ? 'cursor-grab' : 'cursor-zoom-in')">
 
         {# Grille horizontale (reste statique — repère d'altitude) #}
         {% for t in profile.y_ticks %}
@@ -43,7 +43,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
         {% endfor %}
 
         {# SVG — viewBox réactif pour le zoom #}
-        <svg :viewBox="viewBox" preserveAspectRatio="none"
+        <svg :viewBox="`${vx} ${vy} ${vw} ${vh}`" preserveAspectRatio="none"
              class="block h-full w-full" role="img" aria-label="Profil d'altitude">
           <defs>
             <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
@@ -97,9 +97,9 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
 
         {# Badge zoom + bouton reset #}
         <div class="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5"
-             x-show="zoomed" x-cloak>
+             x-show="vw < 970" x-cloak>
           <span class="num rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-slate-400 backdrop-blur-sm"
-                x-text="zoomLabel"></span>
+                x-text="(Math.round(1000/vw*10)/10)+'×'"></span>
           <button class="pointer-events-auto rounded bg-black/50 px-2 py-0.5 text-[11px]
                          text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
                   @click.stop="reset()" title="Réinitialiser (double-clic aussi)">↺</button>
@@ -108,10 +108,10 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
       </div>
 
       {# Labels cols (sous le profil, inclinés) #}
-      <div class="relative h-14 overflow-hidden text-[10px] leading-none text-amber-600/90 dark:text-amber-500/80">
+      <div class="relative h-20 overflow-hidden text-[10px] leading-none text-amber-500/90 dark:text-amber-400/90">
         {% for c in profile.climbs %}
-        <div class="absolute top-1 whitespace-nowrap"
-             style="left: {{ c.left_pct }}%; transform-origin: top left; transform: rotate(38deg);"
+        <div class="absolute top-1 whitespace-nowrap font-medium"
+             style="left: {{ c.left_pct }}%; transform-origin: top left; transform: rotate(30deg);"
              title="{{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}">
           ▲ {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
         </div>
@@ -138,10 +138,6 @@ if (!window.profileZoom) {
       vx: 0, vy: 0, vw: W, vh: H,
       dragging: false,
       _lx: 0, _ly: 0, _pd: null,
-
-      get viewBox()   { return `${this.vx} ${this.vy} ${this.vw} ${this.vh}`; },
-      get zoomed()    { return this.vw < W * 0.97; },
-      get zoomLabel() { return (Math.round(W / this.vw * 10) / 10) + '×'; },
 
       _clamp() {
         this.vw = Math.max(W * 0.04, Math.min(W, this.vw));
