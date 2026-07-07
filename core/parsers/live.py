@@ -8,39 +8,62 @@ from core.parsers.common import slug_from_href
 
 _DATA_RE = re.compile(r'var data = (\{.*?\});', re.DOTALL)
 _GAP_RE = re.compile(r'\+\d+:\d+')
-_TIMER_RE = re.compile(r'\b\d+[smh]\b')  # "9s", "2m", "1h" → timers PCS à supprimer
+_TIMER_RE = re.compile(r'\b\d+[smh]\b')  # "9s", "2m", "1h" → timers PCS
+_SHOW_MORE_RE = re.compile(r'show \d+ more', re.I)
+# Classes CSS PCS à ignorer complètement lors du walk
+_SKIP_CLASSES = frozenset({
+    'flag', 'timeago', 'timeago2', 'chartCont', 'valuebar',
+    'donut-chart', 'clear', 'infoSnippet', 'bib', 'svg_cross',
+    'hor-line', 'vert-line', 'vert-label', 'delta-equal',
+})
 
 
 def _clean_event_html(cont):
     """Reconstruit un HTML propre depuis .cont PCS : texte + liens coureurs.
 
-    Supprime les timers PCS (9s, 2m…) et les balises parasites,
-    garde uniquement le texte et les <a href="rider/..."> .
+    Cible uniquement .textCont (évite chartCont, timeago2, infoSnippet…).
+    Supprime les hashtags PCS (#RiderAttack…) et les boutons "show more".
     """
     if not cont:
         return ''
     from bs4 import NavigableString, Tag
+
+    # Cibler uniquement le sous-élément textCont si présent
+    target = cont.find(class_='textCont') or cont
 
     parts = []
 
     def walk(node):
         if isinstance(node, NavigableString):
             t = str(node)
-            if t.strip():
-                parts.append(t)
+            ts = t.strip()
+            if not ts:
+                return
+            if ts.startswith('#'):  # hashtag PCS (#RiderAttack, #RiderWins…)
+                return
+            if _SHOW_MORE_RE.search(ts):  # "show 14 more lines"
+                return
+            parts.append(t)
         elif isinstance(node, Tag):
-            if node.name == 'a' and 'rider/' in (node.get('href') or ''):
-                parts.append(str(node))
-            elif node.name == 'br':
+            cls = set(node.get('class') or [])
+            if cls & _SKIP_CLASSES:  # élément à ignorer
+                return
+            if node.name == 'a':
+                href = node.get('href') or ''
+                if 'rider/' in href:
+                    parts.append(str(node))
+                # Liens non-coureurs (showmore, goto, race/…) → ignorés
+                return
+            if node.name == 'br':
                 parts.append(' ')
-            else:
-                for child in node.children:
-                    walk(child)
+                return
+            for child in node.children:
+                walk(child)
 
-    walk(cont)
+    walk(target)
     raw = ''.join(parts)
-    # Supprime les timers PCS standalone ("9s", "2m"…) entourés d'espaces
     raw = _TIMER_RE.sub('', raw)
+    raw = re.sub(r'#\w+', '', raw)  # hashtags restants dans le texte brut
     return re.sub(r' {2,}', ' ', raw).strip()
 
 
