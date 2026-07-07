@@ -12,47 +12,27 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
 <script>if(!window.Hammer){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"><\/scr'+'ipt>')}</script>
 <script>if(!window._czLoaded){window._czLoaded=1;document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"><\/scr'+'ipt><scr'+'ipt src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"><\/scr'+'ipt>')}</script>
 
-<div class="w-full space-y-0">
+<div class="relative rounded-lg bg-ink-800 overflow-hidden" style="height:280px">
+  <canvas id="elevChart" class="block w-full h-full"></canvas>
 
-  {# Zone graphique #}
-  <div class="relative rounded-lg bg-ink-800 overflow-hidden" style="height:260px">
-    <canvas id="elevChart" class="block w-full h-full"></canvas>
+  <button onclick="window.__elevChart&&window.__elevChart.resetZoom()"
+          class="absolute top-2 right-2 rounded bg-black/50 px-2 py-0.5 text-[11px]
+                 text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
+          title="Réinitialiser le zoom (double-clic aussi)">↺</button>
 
-    {# Bouton reset zoom (toujours visible, actif seulement si zoomé) #}
-    <button onclick="const c=window.__elevChart;if(c){c.resetZoom();window.__elevRepos&&window.__elevRepos();}"
-            class="absolute top-2 right-2 rounded bg-black/50 px-2 py-0.5 text-[11px]
-                   text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
-            title="Réinitialiser le zoom (double-clic aussi)">↺</button>
-
-    {% if live %}
-    {# Surveillance réactive de d.perc (scope parent liveStage) #}
-    <div class="hidden" x-effect="
-      const c = window.__elevChart;
-      if (c) {
-        const km = (d.perc||0) / 100 * (window.__elevChartMaxKm||100);
-        const ann = c.options.plugins.annotation.annotations;
-        if (ann.progress) { ann.progress.xMin = km; ann.progress.xMax = km; }
-        if (ann.progressDot) { ann.progressDot.xValue = km; }
-        c.update('none');
-      }
-    "></div>
-    {% endif %}
-  </div>
-
-  {# Labels des cols sous le graphique (positionnés par JS) #}
-  {% if profile.climbs %}
-  <div id="elevLabels" class="relative h-20 overflow-hidden ml-0 text-[10px] leading-none text-amber-400/90 dark:text-amber-400">
-    {% for c in profile.climbs %}
-    <div class="absolute top-1 whitespace-nowrap font-medium"
-         data-km="{{ c.km }}"
-         style="transform-origin: top left; transform: rotate(30deg); left: 0; visibility: hidden;"
-         title="{{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}">
-      ▲ {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
-    </div>
-    {% endfor %}
-  </div>
+  {% if live %}
+  {# Surveillance réactive de d.perc (scope parent liveStage) #}
+  <div class="hidden" x-effect="
+    const c = window.__elevChart;
+    if (c) {
+      const km = (d.perc||0) / 100 * (window.__elevChartMaxKm||100);
+      const ann = c.options.plugins.annotation.annotations;
+      if (ann.progress)    { ann.progress.xMin = km; ann.progress.xMax = km; }
+      if (ann.progressDot) { ann.progressDot.xValue = km; }
+      c.update('none');
+    }
+  "></div>
   {% endif %}
-
 </div>
 
 <script>
@@ -60,11 +40,12 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   const canvas = document.getElementById('elevChart');
   if (!canvas || !window.Chart) return;
 
-  const raw     = {{ profile.raw_points|safe }};
-  const maxKm   = {{ profile.max_km|default:"null" }};
-  const minEle  = {{ profile.min_ele|default:"null" }};
-  const maxEle  = {{ profile.max_ele|default:"null" }};
-  const hasEle  = minEle !== null && maxEle !== null;
+  const raw    = {{ profile.raw_points|safe }};
+  const maxKm  = {{ profile.max_km|default:"null" }};
+  const minEle = {{ profile.min_ele|default:"null" }};
+  const maxEle = {{ profile.max_ele|default:"null" }};
+  const hasEle = minEle !== null && maxEle !== null;
+  const yBot   = hasEle ? minEle : 0;
 
   window.__elevChartMaxKm = maxKm || 100;
 
@@ -75,13 +56,13 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   }));
 
   // Gradient de remplissage
-  const ctx = canvas.getContext('2d');
-  const grad = ctx.createLinearGradient(0, 0, 0, 260);
-  grad.addColorStop(0,    'rgba(59,130,246,0.65)');
-  grad.addColorStop(0.7,  'rgba(29,78,216,0.18)');
-  grad.addColorStop(1,    'rgba(30,64,175,0.04)');
+  const ctx  = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 280);
+  grad.addColorStop(0,   'rgba(59,130,246,0.65)');
+  grad.addColorStop(0.7, 'rgba(29,78,216,0.18)');
+  grad.addColorStop(1,   'rgba(30,64,175,0.04)');
 
-  // Annotations : cols
+  // Annotations : ligne + badge catégorie + nom incliné pour chaque col
   const annotations = {};
   {% for c in profile.climbs %}
   annotations['cl{{ forloop.counter }}'] = {
@@ -104,13 +85,26 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
     },
     {% endif %}
   };
+  annotations['nm{{ forloop.counter }}'] = {
+    type: 'label',
+    xValue: {{ c.km }},
+    yValue: yBot,
+    position: { x: 'start', y: 'end' },
+    xAdjust: 3,
+    yAdjust: -4,
+    rotation: 35,
+    content: '▲ {{ c.name|escapejs }}{% if c.category %} ({{ c.category }}){% endif %}',
+    font: { size: 9, weight: '500' },
+    color: 'rgba(251,191,36,0.9)',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  };
   {% endfor %}
 
   {% if live %}
   annotations.progress = { type: 'line', xMin: 0, xMax: 0, borderColor: '#ef4444', borderWidth: 2.5 };
   annotations.progressDot = {
-    type: 'point', xValue: 0,
-    yValue: hasEle ? minEle : 0,
+    type: 'point', xValue: 0, yValue: yBot,
     radius: 5, backgroundColor: '#ef4444',
     borderColor: '#0f172a', borderWidth: 2,
   };
@@ -163,48 +157,21 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
         legend: { display: false },
         tooltip: { enabled: false },
         zoom: {
-          pan: {
-            enabled: true,
-            mode: 'x',
-            onPanComplete({ chart }) { _repos(chart); },
-          },
+          pan: { enabled: true, mode: 'x' },
           zoom: {
             wheel: { enabled: true },
             pinch: { enabled: true },
             mode: 'x',
-            onZoomComplete({ chart }) { _repos(chart); },
           },
         },
-        annotation: { annotations },
+        annotation: { clip: false, annotations },
       },
     },
   });
 
   window.__elevChart = chart;
-  window.__elevRepos = () => _repos(chart);
-
-  // Repositionne les labels de cols en fonction de la vue courante
-  function _repos(ch) {
-    const labelsDiv = document.getElementById('elevLabels');
-    if (!labelsDiv) return;
-    const ca = ch.chartArea;
-    if (!ca) return;
-    labelsDiv.style.marginLeft = ca.left + 'px';
-    labelsDiv.style.width = (ca.right - ca.left) + 'px';
-    labelsDiv.querySelectorAll('[data-km]').forEach(el => {
-      const km = parseFloat(el.dataset.km);
-      const px = ch.scales.x.getPixelForValue(km) - ca.left;
-      const visible = px >= -20 && px <= (ca.right - ca.left) + 20;
-      el.style.left = px + 'px';
-      el.style.visibility = visible ? 'visible' : 'hidden';
-    });
-  }
-
-  canvas.addEventListener('dblclick', () => { chart.resetZoom(); _repos(chart); });
+  canvas.addEventListener('dblclick', () => chart.resetZoom());
   canvas.style.cursor = 'zoom-in';
-
-  // Positionnement initial (après le premier rendu)
-  requestAnimationFrame(() => _repos(chart));
 })();
 </script>
 
