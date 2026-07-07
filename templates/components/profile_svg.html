@@ -46,7 +46,6 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   const maxEle = {{ profile.max_ele|default:"null" }};
   const hasEle = minEle !== null && maxEle !== null;
   const yBot   = hasEle ? minEle : 0;
-  const yTop   = hasEle ? maxEle : 100;
 
   window.__elevChartMaxKm = maxKm || 100;
 
@@ -76,7 +75,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
     label: {
       display: true,
       content: '{{ c.category }}',
-      position: 'start',
+      position: 'end',
       yAdjust: 4,
       color: 'white',
       backgroundColor: 'rgba(146,64,14,0.92)',
@@ -86,21 +85,39 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
     },
     {% endif %}
   };
-  annotations['nm{{ forloop.counter }}'] = {
-    type: 'label',
-    xValue: {{ c.km }},
-    yValue: yTop,
-    position: { x: 'start', y: 'start' },
-    xAdjust: 3,
-    yAdjust: {% if c.category %}22{% else %}6{% endif %},
-    rotation: 35,
-    content: '▲ {{ c.name|escapejs }}{% if c.category %} ({{ c.category }}){% endif %}',
-    font: { size: 9, weight: '500' },
-    color: 'rgba(251,191,36,0.9)',
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-  };
   {% endfor %}
+
+  // Noms des cols : dessinés directement sur le canvas via afterDraw
+  // → se repositionnent automatiquement à chaque pan/zoom
+  const climbNames = [
+    {% for c in profile.climbs %}
+    { km: {{ c.km }}, label: '▲ {{ c.name|escapejs }}{% if c.category %} ({{ c.category }}){% endif %}', yOff: {% if c.category %}22{% else %}6{% endif %} },
+    {% endfor %}
+  ];
+  const climbNamesPlugin = {
+    id: 'climbNames',
+    afterDraw(chart) {
+      if (!climbNames.length) return;
+      const { ctx, chartArea: ca, scales: { x } } = chart;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top);
+      ctx.clip();
+      ctx.font = '500 9px system-ui,sans-serif';
+      ctx.fillStyle = 'rgba(251,191,36,0.92)';
+      const RAD = 35 * Math.PI / 180;
+      climbNames.forEach(({ km, label, yOff }) => {
+        const px = x.getPixelForValue(km);
+        if (px < ca.left || px > ca.right) return;
+        ctx.save();
+        ctx.translate(px + 3, ca.top + yOff);
+        ctx.rotate(RAD);
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      });
+      ctx.restore();
+    },
+  };
 
   {% if live %}
   annotations.progress = { type: 'line', xMin: 0, xMax: 0, borderColor: '#ef4444', borderWidth: 2.5 };
@@ -117,6 +134,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   {% endif %}
 
   const chart = new Chart(canvas, {
+    plugins: [climbNamesPlugin],
     type: 'line',
     data: {
       datasets: [{
