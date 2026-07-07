@@ -1,223 +1,204 @@
 {% load l10n %}
 {% comment %}
-Profil d'altitude SVG interactif (zoom molette/pinch + glisser).
+Profil d'altitude interactif avec Chart.js (zoom molette/pinch + glisser).
 Contexte : `profile` (build_profile_svg).
 Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre Alpine réactive).
 {% endcomment %}
 {% localize off %}
 {% if profile %}
-<div class="w-full" x-data="profileZoom()">
-  <div class="flex">
 
-    {# Axe altitude (gauche) #}
-    <div class="relative w-12 shrink-0">
-      <div class="relative h-52 sm:h-64">
-        {% for t in profile.y_ticks %}
-        <div class="absolute right-1 -translate-y-1/2 text-[10px] text-slate-500 num"
-             style="top: {{ t.top_pct }}%;">{{ t.label }}</div>
-        {% endfor %}
-      </div>
-      <div class="h-5"></div>
-    </div>
+{# Chart.js + plugins (chargés une seule fois grâce aux guards JS) #}
+<script>if(!window.Chart){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/scr'+'ipt>')}</script>
+<script>if(!window.Hammer){document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"><\/scr'+'ipt>')}</script>
+<script>if(!window._czLoaded){window._czLoaded=1;document.write('<scr'+'ipt src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"><\/scr'+'ipt><scr'+'ipt src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"><\/scr'+'ipt>')}</script>
 
-    {# Zone de tracé #}
-    <div class="relative flex-1">
+<div class="w-full space-y-0">
 
-      {# Conteneur SVG interactif #}
-      <div class="relative h-52 sm:h-64 overflow-hidden rounded-lg bg-ink-800 select-none touch-none"
-           @wheel.prevent="onWheel($event)"
-           @mousedown.prevent="startDrag($event)"
-           @mousemove="moveDrag($event)"
-           @mouseup="endDrag()"
-           @mouseleave="endDrag()"
-           @dblclick="reset()"
-           @touchstart.prevent="touchStart($event)"
-           @touchmove.prevent="touchMove($event)"
-           @touchend="touchEnd()"
-           :class="dragging ? 'cursor-grabbing' : (vw < 970 ? 'cursor-grab' : 'cursor-zoom-in')">
+  {# Zone graphique #}
+  <div class="relative rounded-lg bg-ink-800 overflow-hidden" style="height:260px">
+    <canvas id="elevChart" class="block w-full h-full"></canvas>
 
-        {# Grille horizontale (reste statique — repère d'altitude) #}
-        {% for t in profile.y_ticks %}
-        <div class="pointer-events-none absolute inset-x-0 border-t border-white/[0.06]"
-             style="top: {{ t.top_pct }}%;"></div>
-        {% endfor %}
+    {# Bouton reset zoom (toujours visible, actif seulement si zoomé) #}
+    <button onclick="window.__elevChart&&window.__elevChart.resetZoom()"
+            class="absolute top-2 right-2 rounded bg-black/50 px-2 py-0.5 text-[11px]
+                   text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
+            title="Réinitialiser le zoom (double-clic aussi)">↺</button>
 
-        {# SVG — viewBox réactif pour le zoom #}
-        <svg :viewBox="`${vx} ${vy} ${vw} ${vh}`" preserveAspectRatio="none"
-             class="block h-full w-full" role="img" aria-label="Profil d'altitude">
-          <defs>
-            <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stop-color="#3b82f6" stop-opacity="0.65"/>
-              <stop offset="70%"  stop-color="#1d4ed8" stop-opacity="0.18"/>
-              <stop offset="100%" stop-color="#1e40af" stop-opacity="0.04"/>
-            </linearGradient>
-          </defs>
-
-          {# Aire sous la courbe #}
-          <path d="{{ profile.area }}" fill="url(#pFill)"/>
-
-          {# Ligne du profil #}
-          <polyline points="{{ profile.polyline }}" fill="none" stroke="#93c5fd"
-                    stroke-width="2.5" stroke-linejoin="round"
-                    vector-effect="non-scaling-stroke"/>
-
-          {# Marqueurs cols / sprints (dans le SVG → zooment avec le profil) #}
-          {% for c in profile.climbs %}
-          <g>
-            <line x1="{{ c.svg_x }}" y1="0" x2="{{ c.svg_x }}" y2="{{ profile.height }}"
-                  stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4 3"
-                  vector-effect="non-scaling-stroke" opacity="0.75"/>
-            {% if c.category %}
-            <rect x="{{ c.svg_x }}" y="4" width="21" height="13" rx="2"
-                  fill="#92400e" fill-opacity="0.92"/>
-            <text x="{{ c.svg_x }}" y="14" dx="3" font-size="9" fill="white"
-                  font-weight="bold" font-family="monospace">{{ c.category }}</text>
-            {% endif %}
-          </g>
-          {% endfor %}
-
-          {# Barre de progression statique (si fournie) #}
-          {% if progress_pct %}
-          <line x1="{{ progress_pct }}" y1="0" x2="{{ progress_pct }}" y2="{{ profile.height }}"
-                transform="scale(10,1)"
-                stroke="#ef4444" stroke-width="2" vector-effect="non-scaling-stroke"/>
-          {% endif %}
-
-          {# Barre de progression live réactive (scope parent liveStage) #}
-          {% if live %}
-          <g x-show="d.perc" x-cloak :transform="`translate(${(d.perc||0)*10},0)`">
-            <line x1="0" y1="0" x2="0" y2="{{ profile.height }}"
-                  stroke="#ef4444" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
-            <circle cx="0" cy="{{ profile.height }}" r="5"
-                    fill="#ef4444" stroke="#0f172a" stroke-width="2"
-                    vector-effect="non-scaling-stroke"/>
-          </g>
-          {% endif %}
-        </svg>
-
-        {# Badge zoom + bouton reset #}
-        <div class="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5"
-             x-show="vw < 970" x-cloak>
-          <span class="num rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-slate-400 backdrop-blur-sm"
-                x-text="(Math.round(1000/vw*10)/10)+'×'"></span>
-          <button class="pointer-events-auto rounded bg-black/50 px-2 py-0.5 text-[11px]
-                         text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
-                  @click.stop="reset()" title="Réinitialiser (double-clic aussi)">↺</button>
-        </div>
-
-      </div>
-
-      {# Labels cols (sous le profil, inclinés) #}
-      <div class="relative h-20 overflow-hidden text-[10px] leading-none text-amber-500/90 dark:text-amber-400/90">
-        {% for c in profile.climbs %}
-        <div class="absolute top-1 whitespace-nowrap font-medium"
-             style="left: {{ c.left_pct }}%; transform-origin: top left; transform: rotate(30deg);"
-             title="{{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}">
-          ▲ {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
-        </div>
-        {% endfor %}
-      </div>
-    </div>
+    {% if live %}
+    {# Surveillance réactive de d.perc (scope parent liveStage) #}
+    <div class="hidden" x-effect="
+      const c = window.__elevChart;
+      if (c) {
+        const km = (d.perc||0) / 100 * (window.__elevChartMaxKm||100);
+        const ann = c.options.plugins.annotation.annotations;
+        if (ann.progress) { ann.progress.xMin = km; ann.progress.xMax = km; }
+        if (ann.progressDot) { ann.progressDot.xValue = km; }
+        c.update('none');
+      }
+    "></div>
+    {% endif %}
   </div>
 
-  {# Axe distance (bas) #}
-  <div class="relative ml-12 h-4">
-    {% for t in profile.x_ticks %}
-    <div class="absolute -translate-x-1/2 text-[10px] text-slate-500 num"
-         style="left: {{ t.left_pct }}%;">{{ t.label }}</div>
+  {# Labels des cols sous le graphique (positionnés par JS) #}
+  {% if profile.climbs %}
+  <div id="elevLabels" class="relative h-20 overflow-hidden ml-0 text-[10px] leading-none text-amber-400/90 dark:text-amber-400">
+    {% for c in profile.climbs %}
+    <div class="absolute top-1 whitespace-nowrap font-medium"
+         data-km="{{ c.km }}"
+         style="transform-origin: top left; transform: rotate(30deg); left: 0; visibility: hidden;"
+         title="{{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}">
+      ▲ {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
+    </div>
     {% endfor %}
-    <div class="absolute right-0 -bottom-3 text-[10px] text-slate-600">km</div>
   </div>
+  {% endif %}
+
 </div>
 
 <script>
-if (!window.profileZoom) {
-  window.profileZoom = function() {
-    const W = 1000, H = 200;
-    return {
-      vx: 0, vy: 0, vw: W, vh: H,
-      dragging: false,
-      _lx: 0, _ly: 0, _pd: null,
+(function () {
+  const canvas = document.getElementById('elevChart');
+  if (!canvas || !window.Chart) return;
 
-      _clamp() {
-        this.vw = Math.max(W * 0.04, Math.min(W, this.vw));
-        this.vh = Math.max(H * 0.04, Math.min(H, this.vh));
-        this.vx = Math.max(0, Math.min(W - this.vw, this.vx));
-        this.vy = Math.max(0, Math.min(H - this.vh, this.vy));
-      },
-      _zoomAt(mx, my, factor) {
-        const nw = this.vw * factor, nh = this.vh * factor;
-        this.vx += mx * (this.vw - nw);
-        this.vy += my * (this.vh - nh);
-        this.vw = nw; this.vh = nh;
-        this._clamp();
-      },
+  const raw     = {{ profile.raw_points|safe }};
+  const maxKm   = {{ profile.max_km|default:"null" }};
+  const minEle  = {{ profile.min_ele|default:"null" }};
+  const maxEle  = {{ profile.max_ele|default:"null" }};
+  const hasEle  = minEle !== null && maxEle !== null;
 
-      onWheel(e) {
-        const r = e.currentTarget.getBoundingClientRect();
-        this._zoomAt(
-          (e.clientX - r.left) / r.width,
-          (e.clientY - r.top)  / r.height,
-          e.deltaY > 0 ? 1.15 : 1 / 1.15
-        );
-      },
+  window.__elevChartMaxKm = maxKm || 100;
 
-      startDrag(e) {
-        this.dragging = true;
-        this._lx = e.clientX; this._ly = e.clientY;
-      },
-      moveDrag(e) {
-        if (!this.dragging) return;
-        const r = e.currentTarget.getBoundingClientRect();
-        this.vx -= (e.clientX - this._lx) / r.width  * this.vw;
-        this.vy -= (e.clientY - this._ly) / r.height * this.vh;
-        this._clamp();
-        this._lx = e.clientX; this._ly = e.clientY;
-      },
-      endDrag() { this.dragging = false; },
+  // Conversion → {x: km, y: elevation}
+  const pts = raw.map(([xp, hp]) => ({
+    x: maxKm ? xp / 100 * maxKm : xp,
+    y: hasEle ? minEle + (hp / 100) * (maxEle - minEle) : hp,
+  }));
 
-      touchStart(e) {
-        if (e.touches.length === 2) {
-          this._pd = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-          this.dragging = false;
-        } else {
-          this._pd = null;
-          this.dragging = true;
-          this._lx = e.touches[0].clientX;
-          this._ly = e.touches[0].clientY;
-        }
-      },
-      touchMove(e) {
-        if (e.touches.length === 2) {
-          const d = Math.hypot(
-            e.touches[0].clientX - e.touches[1].clientX,
-            e.touches[0].clientY - e.touches[1].clientY
-          );
-          if (this._pd) {
-            const r = e.currentTarget.getBoundingClientRect();
-            const cx = ((e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left) / r.width;
-            const cy = ((e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top)  / r.height;
-            this._zoomAt(cx, cy, this._pd / d);
-          }
-          this._pd = d;
-        } else if (this.dragging) {
-          const r = e.currentTarget.getBoundingClientRect();
-          this.vx -= (e.touches[0].clientX - this._lx) / r.width  * this.vw;
-          this.vy -= (e.touches[0].clientY - this._ly) / r.height * this.vh;
-          this._clamp();
-          this._lx = e.touches[0].clientX;
-          this._ly = e.touches[0].clientY;
-        }
-      },
-      touchEnd() { this.dragging = false; this._pd = null; },
+  // Gradient de remplissage
+  const ctx = canvas.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0,    'rgba(59,130,246,0.65)');
+  grad.addColorStop(0.7,  'rgba(29,78,216,0.18)');
+  grad.addColorStop(1,    'rgba(30,64,175,0.04)');
 
-      reset() { this.vx = 0; this.vy = 0; this.vw = W; this.vh = H; },
-    };
+  // Annotations : cols
+  const annotations = {};
+  {% for c in profile.climbs %}
+  annotations['cl{{ forloop.counter }}'] = {
+    type: 'line',
+    xMin: {{ c.km }}, xMax: {{ c.km }},
+    borderColor: 'rgba(251,191,36,0.7)',
+    borderWidth: 1.5,
+    borderDash: [4, 3],
+    {% if c.category %}
+    label: {
+      display: true,
+      content: '{{ c.category }}',
+      position: 'start',
+      yAdjust: 4,
+      color: 'white',
+      backgroundColor: 'rgba(146,64,14,0.92)',
+      font: { family: 'monospace', size: 9, weight: 'bold' },
+      padding: { x: 3, y: 2 },
+      borderRadius: 2,
+    },
+    {% endif %}
   };
-}
+  {% endfor %}
+
+  {% if live %}
+  annotations.progress = { type: 'line', xMin: 0, xMax: 0, borderColor: '#ef4444', borderWidth: 2.5 };
+  annotations.progressDot = {
+    type: 'point', xValue: 0,
+    yValue: hasEle ? minEle : 0,
+    radius: 5, backgroundColor: '#ef4444',
+    borderColor: '#0f172a', borderWidth: 2,
+  };
+  {% elif progress_pct %}
+  {
+    const km = {{ progress_pct }} / 100 * (maxKm || 100);
+    annotations.progress = { type: 'line', xMin: km, xMax: km, borderColor: '#ef4444', borderWidth: 2 };
+  }
+  {% endif %}
+
+  const chart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      datasets: [{
+        data: pts,
+        borderColor: '#93c5fd',
+        borderWidth: 2.5,
+        fill: true,
+        backgroundColor: grad,
+        pointRadius: 0,
+        tension: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      parsing: false,
+      layout: { padding: 0 },
+      scales: {
+        x: {
+          type: 'linear',
+          title: { display: true, text: 'km', color: '#64748b', font: { size: 10 }, padding: { top: 2 } },
+          ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          border: { color: 'rgba(255,255,255,0.1)' },
+        },
+        y: {
+          ticks: {
+            color: '#64748b',
+            font: { size: 10 },
+            maxTicksLimit: 5,
+            callback: hasEle ? (v) => Math.round(v) + ' m' : (v) => Math.round(v),
+          },
+          grid: { color: 'rgba(255,255,255,0.06)' },
+          border: { color: 'rgba(255,255,255,0.1)' },
+        },
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        zoom: {
+          pan: { enabled: true, mode: 'x' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x',
+          },
+        },
+        annotation: { annotations },
+      },
+    },
+  });
+
+  window.__elevChart = chart;
+
+  canvas.addEventListener('dblclick', () => chart.resetZoom());
+  canvas.style.cursor = 'zoom-in';
+  canvas.addEventListener('chartjs:zoom', () => { canvas.style.cursor = 'grab'; });
+
+  // Positionner les labels de cols sous le graphique
+  const labelsDiv = document.getElementById('elevLabels');
+  if (labelsDiv) {
+    // Attendre que Chart.js ait calculé chartArea
+    requestAnimationFrame(() => {
+      const ca = chart.chartArea;
+      if (!ca) return;
+      const plotW = ca.right - ca.left;
+      labelsDiv.style.marginLeft = ca.left + 'px';
+      labelsDiv.querySelectorAll('[data-km]').forEach(el => {
+        const km = parseFloat(el.dataset.km);
+        const x = maxKm ? km / maxKm * plotW : km / 100 * plotW;
+        el.style.left = x + 'px';
+        el.style.visibility = 'visible';
+      });
+    });
+  }
+})();
 </script>
 
 {% elif image_url %}
