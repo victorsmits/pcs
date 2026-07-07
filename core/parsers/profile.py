@@ -1,4 +1,4 @@
-"""Extraction du profil d'altitude (polygone clip-path PCS) → points SVG."""
+"""Extraction du profil d'altitude (polygone clip-path PCS) → points normalisés."""
 import re
 
 _POLY_RE = re.compile(r'clip-path:\s*polygon\(([^)]+)\)')
@@ -35,20 +35,3 @@ def extract_elevation_points(html):
 
     points.sort(key=lambda p: p[0])
     return points
-
-
-def points_to_svg(points, width=1000, height=200, pad_top=6):
-    """Convertit [[x,h],…] en attributs SVG : (polyline_points, area_path)."""
-    if not points:
-        return '', ''
-    usable = height - pad_top
-    coords = []
-    for x, h in points:
-        sx = round(x / 100.0 * width, 2)
-        sy = round(height - (h / 100.0 * usable), 2)
-        coords.append((sx, sy))
-    polyline = ' '.join(f'{x},{y}' for x, y in coords)
-    area = (f'M {coords[0][0]},{height} '
-            + ' '.join(f'L {x},{y}' for x, y in coords)
-            + f' L {coords[-1][0]},{height} Z')
-    return polyline, area
