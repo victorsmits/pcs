@@ -1,15 +1,17 @@
 {% load l10n %}
 {% comment %}
-Profil d'altitude SVG avec échelle. Contexte : `profile` (build_profile_svg).
-Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs` (via profile.climbs).
+Profil d'altitude SVG interactif (zoom molette/pinch + glisser).
+Contexte : `profile` (build_profile_svg).
+Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre Alpine réactive).
 {% endcomment %}
 {% localize off %}
 {% if profile %}
-<div class="w-full">
+<div class="w-full" x-data="profileZoom()">
   <div class="flex">
+
     {# Axe altitude (gauche) #}
     <div class="relative w-12 shrink-0">
-      <div class="relative h-40 sm:h-48">
+      <div class="relative h-52 sm:h-64">
         {% for t in profile.y_ticks %}
         <div class="absolute right-1 -translate-y-1/2 text-[10px] text-slate-500 num"
              style="top: {{ t.top_pct }}%;">{{ t.label }}</div>
@@ -20,58 +22,96 @@ Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs`
 
     {# Zone de tracé #}
     <div class="relative flex-1">
-      <div class="relative h-40 overflow-hidden rounded-lg bg-ink-800 sm:h-48">
-        {# Lignes de grille horizontales #}
+
+      {# Conteneur SVG interactif #}
+      <div class="relative h-52 sm:h-64 overflow-hidden rounded-lg bg-ink-800 select-none touch-none"
+           @wheel.prevent="onWheel($event)"
+           @mousedown.prevent="startDrag($event)"
+           @mousemove="moveDrag($event)"
+           @mouseup="endDrag()"
+           @mouseleave="endDrag()"
+           @dblclick="reset()"
+           @touchstart.prevent="touchStart($event)"
+           @touchmove.prevent="touchMove($event)"
+           @touchend="touchEnd()"
+           :class="dragging ? 'cursor-grabbing' : (zoomed ? 'cursor-grab' : 'cursor-zoom-in')">
+
+        {# Grille horizontale (reste statique — repère d'altitude) #}
         {% for t in profile.y_ticks %}
-        <div class="pointer-events-none absolute inset-x-0 border-t border-ink-700/50"
+        <div class="pointer-events-none absolute inset-x-0 border-t border-white/[0.06]"
              style="top: {{ t.top_pct }}%;"></div>
         {% endfor %}
 
-        <svg viewBox="0 0 {{ profile.width }} {{ profile.height }}" preserveAspectRatio="none"
-             class="relative block h-full w-full" role="img" aria-label="Profil d'altitude">
+        {# SVG — viewBox réactif pour le zoom #}
+        <svg :viewBox="viewBox" preserveAspectRatio="none"
+             class="block h-full w-full" role="img" aria-label="Profil d'altitude">
           <defs>
-            <linearGradient id="profileFill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.45"/>
-              <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.04"/>
+            <linearGradient id="pFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stop-color="#3b82f6" stop-opacity="0.65"/>
+              <stop offset="70%"  stop-color="#1d4ed8" stop-opacity="0.18"/>
+              <stop offset="100%" stop-color="#1e40af" stop-opacity="0.04"/>
             </linearGradient>
           </defs>
-          <path d="{{ profile.area }}" fill="url(#profileFill)"/>
-          <polyline points="{{ profile.polyline }}" fill="none" stroke="#60a5fa"
-                    stroke-width="2" vector-effect="non-scaling-stroke"/>
+
+          {# Aire sous la courbe #}
+          <path d="{{ profile.area }}" fill="url(#pFill)"/>
+
+          {# Ligne du profil #}
+          <polyline points="{{ profile.polyline }}" fill="none" stroke="#93c5fd"
+                    stroke-width="2.5" stroke-linejoin="round"
+                    vector-effect="non-scaling-stroke"/>
+
+          {# Marqueurs cols / sprints (dans le SVG → zooment avec le profil) #}
+          {% for c in profile.climbs %}
+          <g>
+            <line x1="{{ c.svg_x }}" y1="0" x2="{{ c.svg_x }}" y2="{{ profile.height }}"
+                  stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="4 3"
+                  vector-effect="non-scaling-stroke" opacity="0.75"/>
+            {% if c.category %}
+            <rect x="{{ c.svg_x }}" y="4" width="21" height="13" rx="2"
+                  fill="#92400e" fill-opacity="0.92"/>
+            <text x="{{ c.svg_x }}" y="14" dx="3" font-size="9" fill="white"
+                  font-weight="bold" font-family="monospace">{{ c.category }}</text>
+            {% endif %}
+          </g>
+          {% endfor %}
+
+          {# Barre de progression statique (si fournie) #}
+          {% if progress_pct %}
+          <line x1="{{ progress_pct }}" y1="0" x2="{{ progress_pct }}" y2="{{ profile.height }}"
+                transform="scale(10,1)"
+                stroke="#ef4444" stroke-width="2" vector-effect="non-scaling-stroke"/>
+          {% endif %}
+
+          {# Barre de progression live réactive (scope parent liveStage) #}
+          {% if live %}
+          <g x-show="d.perc" x-cloak :transform="`translate(${(d.perc||0)*10},0)`">
+            <line x1="0" y1="0" x2="0" y2="{{ profile.height }}"
+                  stroke="#ef4444" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+            <circle cx="0" cy="{{ profile.height }}" r="5"
+                    fill="#ef4444" stroke="#0f172a" stroke-width="2"
+                    vector-effect="non-scaling-stroke"/>
+          </g>
+          {% endif %}
         </svg>
 
-        {# Marqueurs cols #}
-        {% for c in profile.climbs %}
-        <div class="pointer-events-none absolute top-0 h-full" style="left: {{ c.left_pct }}%;">
-          <div class="h-full w-px bg-accent-500/40"></div>
-          {% if c.category %}
-          <div class="absolute top-1 left-1 rounded bg-accent-700/80 px-1 text-[8px] font-bold leading-tight text-white">{{ c.category }}</div>
-          {% endif %}
+        {# Badge zoom + bouton reset #}
+        <div class="pointer-events-none absolute top-2 right-2 flex items-center gap-1.5"
+             x-show="zoomed" x-cloak>
+          <span class="num rounded bg-black/50 px-1.5 py-0.5 text-[10px] text-slate-400 backdrop-blur-sm"
+                x-text="zoomLabel"></span>
+          <button class="pointer-events-auto rounded bg-black/50 px-2 py-0.5 text-[11px]
+                         text-slate-300 backdrop-blur-sm hover:bg-white/10 hover:text-white"
+                  @click.stop="reset()" title="Réinitialiser (double-clic aussi)">↺</button>
         </div>
-        {% endfor %}
 
-        {# Barre de progression statique (si fournie) #}
-        {% if progress_pct %}
-        <div class="pointer-events-none absolute top-0 h-full" style="left: {{ progress_pct }}%;">
-          <div class="h-full w-0.5 bg-live-500"></div>
-        </div>
-        {% endif %}
-
-        {# Barre de progression live réactive (Alpine, scope parent x-data) #}
-        {% if live %}
-        <div class="pointer-events-none absolute top-0 h-full transition-all duration-700"
-             :style="`left: ${d.perc||0}%`" x-show="d.perc" x-cloak>
-          <div class="h-full w-0.5 bg-live-500"></div>
-          <div class="absolute -bottom-1 -translate-x-1/2 h-3 w-3 rounded-full bg-live-500 ring-2 ring-ink-900"></div>
-        </div>
-        {% endif %}
       </div>
 
-      {# Labels cols (sous le profil) — inclinés pour éviter le chevauchement #}
-      <div class="relative h-16 overflow-hidden text-[10px] leading-none text-accent-600 dark:text-accent-400">
+      {# Labels cols (sous le profil, inclinés) #}
+      <div class="relative h-14 overflow-hidden text-[10px] leading-none text-amber-600/90 dark:text-amber-500/80">
         {% for c in profile.climbs %}
         <div class="absolute top-1 whitespace-nowrap"
-             style="left: {{ c.left_pct }}%; transform-origin: top left; transform: rotate(40deg);"
+             style="left: {{ c.left_pct }}%; transform-origin: top left; transform: rotate(38deg);"
              title="{{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}">
           ▲ {{ c.name }}{% if c.category %} ({{ c.category }}){% endif %}
         </div>
@@ -83,11 +123,107 @@ Optionnels : `image_url` (repli), `progress_pct` (barre live statique), `climbs`
   {# Axe distance (bas) #}
   <div class="relative ml-12 h-4">
     {% for t in profile.x_ticks %}
-    <div class="absolute -translate-x-1/2 text-[10px] text-slate-500 num" style="left: {{ t.left_pct }}%;">{{ t.label }}</div>
+    <div class="absolute -translate-x-1/2 text-[10px] text-slate-500 num"
+         style="left: {{ t.left_pct }}%;">{{ t.label }}</div>
     {% endfor %}
     <div class="absolute right-0 -bottom-3 text-[10px] text-slate-600">km</div>
   </div>
 </div>
+
+<script>
+if (!window.profileZoom) {
+  window.profileZoom = function() {
+    const W = 1000, H = 200;
+    return {
+      vx: 0, vy: 0, vw: W, vh: H,
+      dragging: false,
+      _lx: 0, _ly: 0, _pd: null,
+
+      get viewBox()   { return `${this.vx} ${this.vy} ${this.vw} ${this.vh}`; },
+      get zoomed()    { return this.vw < W * 0.97; },
+      get zoomLabel() { return (Math.round(W / this.vw * 10) / 10) + '×'; },
+
+      _clamp() {
+        this.vw = Math.max(W * 0.04, Math.min(W, this.vw));
+        this.vh = Math.max(H * 0.04, Math.min(H, this.vh));
+        this.vx = Math.max(0, Math.min(W - this.vw, this.vx));
+        this.vy = Math.max(0, Math.min(H - this.vh, this.vy));
+      },
+      _zoomAt(mx, my, factor) {
+        const nw = this.vw * factor, nh = this.vh * factor;
+        this.vx += mx * (this.vw - nw);
+        this.vy += my * (this.vh - nh);
+        this.vw = nw; this.vh = nh;
+        this._clamp();
+      },
+
+      onWheel(e) {
+        const r = e.currentTarget.getBoundingClientRect();
+        this._zoomAt(
+          (e.clientX - r.left) / r.width,
+          (e.clientY - r.top)  / r.height,
+          e.deltaY > 0 ? 1.15 : 1 / 1.15
+        );
+      },
+
+      startDrag(e) {
+        this.dragging = true;
+        this._lx = e.clientX; this._ly = e.clientY;
+      },
+      moveDrag(e) {
+        if (!this.dragging) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        this.vx -= (e.clientX - this._lx) / r.width  * this.vw;
+        this.vy -= (e.clientY - this._ly) / r.height * this.vh;
+        this._clamp();
+        this._lx = e.clientX; this._ly = e.clientY;
+      },
+      endDrag() { this.dragging = false; },
+
+      touchStart(e) {
+        if (e.touches.length === 2) {
+          this._pd = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          this.dragging = false;
+        } else {
+          this._pd = null;
+          this.dragging = true;
+          this._lx = e.touches[0].clientX;
+          this._ly = e.touches[0].clientY;
+        }
+      },
+      touchMove(e) {
+        if (e.touches.length === 2) {
+          const d = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          if (this._pd) {
+            const r = e.currentTarget.getBoundingClientRect();
+            const cx = ((e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left) / r.width;
+            const cy = ((e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top)  / r.height;
+            this._zoomAt(cx, cy, this._pd / d);
+          }
+          this._pd = d;
+        } else if (this.dragging) {
+          const r = e.currentTarget.getBoundingClientRect();
+          this.vx -= (e.touches[0].clientX - this._lx) / r.width  * this.vw;
+          this.vy -= (e.touches[0].clientY - this._ly) / r.height * this.vh;
+          this._clamp();
+          this._lx = e.touches[0].clientX;
+          this._ly = e.touches[0].clientY;
+        }
+      },
+      touchEnd() { this.dragging = false; this._pd = null; },
+
+      reset() { this.vx = 0; this.vy = 0; this.vw = W; this.vh = H; },
+    };
+  };
+}
+</script>
+
 {% elif image_url %}
   <img src="{{ image_url }}" alt="Profil de l'étape" class="w-full rounded-lg bg-white">
 {% else %}

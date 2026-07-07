@@ -63,6 +63,7 @@ def build_profile_svg(elevation_points, min_ele=None, max_ele=None, max_km=None,
             continue
         climb_markers.append({
             'left_pct': round(km / effective_max_km * 100, 1),
+            'svg_x': round(km / effective_max_km * VIEW_W, 1),
             'name': c.get('name', ''),
             'category': c.get('category', ''),
         })
