@@ -46,6 +46,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   const maxEle = {{ profile.max_ele|default:"null" }};
   const hasEle = minEle !== null && maxEle !== null;
   const yBot   = hasEle ? minEle : 0;
+  const yTop   = hasEle ? maxEle : 100;
 
   window.__elevChartMaxKm = maxKm || 100;
 
@@ -88,10 +89,10 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   annotations['nm{{ forloop.counter }}'] = {
     type: 'label',
     xValue: {{ c.km }},
-    yValue: yBot,
-    position: { x: 'start', y: 'end' },
+    yValue: yTop,
+    position: { x: 'start', y: 'start' },
     xAdjust: 3,
-    yAdjust: -4,
+    yAdjust: {% if c.category %}22{% else %}6{% endif %},
     rotation: 35,
     content: '▲ {{ c.name|escapejs }}{% if c.category %} ({{ c.category }}){% endif %}',
     font: { size: 9, weight: '500' },
