@@ -103,15 +103,22 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
       ctx.beginPath();
       ctx.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top);
       ctx.clip();
-      ctx.font = '500 9px system-ui,sans-serif';
-      ctx.fillStyle = 'rgba(251,191,36,0.92)';
-      const RAD = 35 * Math.PI / 180;
+      ctx.font = '600 10px system-ui,sans-serif';
+      const RAD = 32 * Math.PI / 180;
+      const PX = 4, PY = 3;   // padding autour du texte
+      const FH = 10;           // hauteur de police
       climbNames.forEach(({ km, label, yOff }) => {
         const px = x.getPixelForValue(km);
         if (px < ca.left || px > ca.right) return;
         ctx.save();
-        ctx.translate(px + 3, ca.top + yOff);
+        ctx.translate(px + 4, ca.top + yOff);
         ctx.rotate(RAD);
+        const tw = ctx.measureText(label).width;
+        // Fond semi-transparent pour la lisibilité
+        ctx.fillStyle = 'rgba(2,8,23,0.72)';
+        ctx.fillRect(-PX, -FH - PY + 1, tw + PX * 2, FH + PY * 2);
+        // Texte
+        ctx.fillStyle = '#fbbf24';
         ctx.fillText(label, 0, 0);
         ctx.restore();
       });
