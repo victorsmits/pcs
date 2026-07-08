@@ -157,7 +157,7 @@ function liveStage() {
     fmt(v) { return (v===null||v===undefined) ? '—' : (Math.round(v*10)/10); },
     riderLinks(html) {
       if (!html) return '';
-      return html.replace(/href="(?:https?:\/\/(?:www\.)?procyclingstats\.com)?\/rider\/([^"]+)"/g, 'href="/rider/$1"');
+      return html.replace(/href="(?:https?:\/\/(?:www\.)?procyclingstats\.com)?\/?rider\/([^"]+)"/g, 'href="/rider/$1"');
     },
     async refresh() {
       try {

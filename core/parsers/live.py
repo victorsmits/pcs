@@ -51,6 +51,10 @@ def _clean_event_html(cont):
             if node.name == 'a':
                 href = node.get('href') or ''
                 if 'rider/' in href:
+                    # Normalise vers /rider/<slug> absolu (PCS peut émettre des chemins relatifs)
+                    m = re.search(r'rider/([^"\'?\s]+)', href)
+                    if m:
+                        node['href'] = f'/rider/{m.group(1)}'
                     parts.append(str(node))
                 # Liens non-coureurs (showmore, goto, race/…) → ignorés
                 return
