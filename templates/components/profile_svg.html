@@ -21,7 +21,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
           title="Réinitialiser le zoom (double-clic aussi)">↺</button>
 
   {% if live %}
-  {# Surveillance réactive de d.perc (scope parent liveStage) #}
+  {# Surveillance réactive de d.perc + groupes (scope parent liveStage) #}
   <div class="hidden" x-effect="
     const c = window.__elevChart;
     if (c) {
@@ -29,6 +29,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
       const ann = c.options.plugins.annotation.annotations;
       if (ann.progress)    { ann.progress.xMin = km; ann.progress.xMax = km; }
       if (ann.progressDot) { ann.progressDot.xValue = km; }
+      window.__elevGroups = d.groups || [];
       c.update('none');
     }
   "></div>
@@ -87,6 +88,47 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   };
   {% endfor %}
 
+  {% if live %}
+  // Marqueurs de groupes : positionnés selon profile_pct de chaque groupe
+  window.__elevGroups = [];
+  const _GRP_COLORS = ['#22c55e', '#f97316', '#eab308', '#94a3b8'];
+  const groupMarkersPlugin = {
+    id: 'groupMarkers',
+    afterDraw(chart) {
+      const groups = (window.__elevGroups || []).filter((g, i) => i > 0 && g.profile_pct != null);
+      if (!groups.length) return;
+      const maxKm = window.__elevChartMaxKm || 100;
+      const { ctx, chartArea: ca, scales: { x } } = chart;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(ca.left, ca.top, ca.right - ca.left, ca.bottom - ca.top);
+      ctx.clip();
+      groups.forEach((g, idx) => {
+        const color = _GRP_COLORS[Math.min(idx + 1, _GRP_COLORS.length - 1)];
+        const px = x.getPixelForValue(g.profile_pct / 100 * maxKm);
+        if (px < ca.left || px > ca.right) return;
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(px, ca.bottom - 7, 5, 0, Math.PI * 2);
+        ctx.fill();
+        if (g.gap) {
+          ctx.font = 'bold 9px system-ui,sans-serif';
+          const lbl = g.gap;
+          const tw = ctx.measureText(lbl).width;
+          const lx = Math.min(Math.max(px, ca.left + tw/2 + 4), ca.right - tw/2 - 4);
+          ctx.fillStyle = 'rgba(2,8,23,0.82)';
+          ctx.fillRect(lx - tw/2 - 3, ca.bottom - 24, tw + 6, 13);
+          ctx.fillStyle = color;
+          ctx.textAlign = 'center';
+          ctx.fillText(lbl, lx, ca.bottom - 13);
+          ctx.textAlign = 'left';
+        }
+      });
+      ctx.restore();
+    },
+  };
+  {% endif %}
+
   // Noms des cols : dessinés directement sur le canvas via afterDraw
   // → se repositionnent automatiquement à chaque pan/zoom
   const climbNames = [
@@ -141,7 +183,7 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   {% endif %}
 
   const chart = new Chart(canvas, {
-    plugins: [climbNamesPlugin],
+    plugins: [climbNamesPlugin{% if live %}, groupMarkersPlugin{% endif %}],
     type: 'line',
     data: {
       datasets: [{

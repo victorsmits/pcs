@@ -1,5 +1,6 @@
 """API JSON live (polling front) + abonnements push."""
 import json
+import re
 from datetime import date, timedelta
 
 from django.conf import settings
@@ -57,7 +58,31 @@ def _upcoming_keypoints(session):
     return out[:15]
 
 
+def _gap_to_seconds(gap_str):
+    """Parse '+MM:SS' or '+H:MM:SS' → seconds (0 if unparseable)."""
+    m = re.search(r'\+?(\d+):(\d{2})(?::(\d{2}))?', gap_str or '')
+    if not m:
+        return 0
+    a, b, c = m.groups()
+    return int(a) * 3600 + int(b) * 60 + int(c) if c else int(a) * 60 + int(b)
+
+
 def _serialize(session):
+    km_done = session.km_done or 0
+    max_km = session.max_km or 0
+    avg_speed = session.avg_speed or 0
+
+    def _group_pct(g):
+        if g.profile_pct is not None:
+            return g.profile_pct
+        if not (max_km and avg_speed and g.gap):
+            return None
+        gap_sec = _gap_to_seconds(g.gap)
+        km_pos = km_done - gap_sec * avg_speed / 3600
+        if km_pos <= 0:
+            return None
+        return round(km_pos / max_km * 100, 1)
+
     return {
         'available': True,
         'race_status': session.race_status,
@@ -71,7 +96,7 @@ def _serialize(session):
         'start_time': session.start_time,
         'groups': [
             {'label': g.label, 'gap': g.gap, 'rider_count': g.rider_count,
-             'profile_pct': g.profile_pct, 'riders': g.riders}
+             'profile_pct': _group_pct(g), 'riders': g.riders}
             for g in session.groups.all()
         ],
         'events': [
