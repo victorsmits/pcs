@@ -107,20 +107,43 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
         const color = _GRP_COLORS[Math.min(idx + 1, _GRP_COLORS.length - 1)];
         const px = x.getPixelForValue(g.profile_pct / 100 * maxKm);
         if (px < ca.left || px > ca.right) return;
+
+        const yTip  = ca.bottom - 3;
+        const yTop  = ca.bottom - 38;
+        const lbl   = g.gap || '';
+
+        // Tige verticale
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(px, yTip - 5);
+        ctx.lineTo(px, yTop + 14);
+        ctx.stroke();
+
+        // Pointe triangulaire en bas
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(px, ca.bottom - 7, 5, 0, Math.PI * 2);
+        ctx.moveTo(px, yTip);
+        ctx.lineTo(px - 5, yTip - 10);
+        ctx.lineTo(px + 5, yTip - 10);
+        ctx.closePath();
         ctx.fill();
-        if (g.gap) {
-          ctx.font = 'bold 9px system-ui,sans-serif';
-          const lbl = g.gap;
-          const tw = ctx.measureText(lbl).width;
-          const lx = Math.min(Math.max(px, ca.left + tw/2 + 4), ca.right - tw/2 - 4);
-          ctx.fillStyle = 'rgba(2,8,23,0.82)';
-          ctx.fillRect(lx - tw/2 - 3, ca.bottom - 24, tw + 6, 13);
-          ctx.fillStyle = color;
+
+        // Badge coloré en haut de la tige
+        ctx.font = 'bold 9px system-ui,sans-serif';
+        const tw = lbl ? ctx.measureText(lbl).width : 0;
+        const bw = tw + 10, bh = 15;
+        const lx = Math.min(Math.max(px, ca.left + bw/2 + 2), ca.right - bw/2 - 2);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.roundRect(lx - bw/2, yTop, bw, bh, 4);
+        ctx.fill();
+        if (lbl) {
+          ctx.fillStyle = '#0f172a';
           ctx.textAlign = 'center';
-          ctx.fillText(lbl, lx, ca.bottom - 13);
+          ctx.textBaseline = 'middle';
+          ctx.fillText(lbl, lx, yTop + bh/2);
+          ctx.textBaseline = 'alphabetic';
           ctx.textAlign = 'left';
         }
       });
