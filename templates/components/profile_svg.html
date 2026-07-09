@@ -349,13 +349,13 @@ if (!window.renderClimbGradientBars) {
       ctx.stroke();
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 9px system-ui,sans-serif';
+      ctx.font = 'bold 10px system-ui,sans-serif';
       ctx.textAlign = 'center';
       const topY = Math.min(y0, y1);
-      ctx.fillText(s.grad.toFixed(1) + '%', xCursor + segW / 2, Math.max(topY - 4, padT + 9));
+      ctx.fillText(s.grad.toFixed(1) + '%', xCursor + segW / 2, Math.max(topY - 5, padT + 10));
 
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '8px system-ui,sans-serif';
+      ctx.font = '9px system-ui,sans-serif';
       ctx.fillText(Math.round(s.b - startKm), xCursor + segW / 2, H - 6);
 
       xCursor += segW;
