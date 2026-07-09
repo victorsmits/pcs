@@ -22,6 +22,8 @@
         </p>
       </div>
       <div class="flex items-center gap-3">
+        <a href="{% url 'catalog:stage_detail' slug=race.slug year=race.year number=stage.number %}"
+           class="btn-ghost">Détail de l'étape</a>
         {% include 'components/follow_button.html' %}
         <div class="num text-right text-xs text-slate-500" x-show="d.updated_at">
           MAJ <span x-text="updatedAgo"></span>
