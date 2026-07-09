@@ -68,10 +68,10 @@
 
   {# Cols & points clés #}
   {% if climbs %}
-  <div class="card card-pad">
+  <div class="card card-pad" x-data="{ open: null }">
     <h2 class="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">Cols & sprints</h2>
     <table class="table-data">
-      <thead><tr><th>Km</th><th>Nom</th><th>Cat.</th><th>Long.</th><th>Pente</th></tr></thead>
+      <thead><tr><th>Km</th><th>Nom</th><th>Cat.</th><th>Long.</th><th>Pente</th><th></th></tr></thead>
       <tbody>
         {% for c in climbs %}
         <tr>
@@ -80,7 +80,33 @@
           <td>{{ c.category|default:"—" }}</td>
           <td class="num">{% if c.length %}{{ c.length }} km{% else %}—{% endif %}</td>
           <td class="num">{% if c.avg_grad %}{{ c.avg_grad }}%{% else %}—{% endif %}</td>
+          <td class="text-right">
+            {% if c.length and c.km %}
+            <button type="button"
+                    class="text-xs text-accent-400 hover:text-accent-300 hover:underline"
+                    @click="
+                      if (open === {{ forloop.counter }}) { open = null; return; }
+                      open = {{ forloop.counter }};
+                      $nextTick(() => {
+                        const ok = window.renderClimbGradientBars && window.renderClimbGradientBars({{ c.km }}, {{ c.length }}, $refs.climbCanvas{{ forloop.counter }});
+                        if (ok === false) { $refs.climbFallback{{ forloop.counter }}.classList.remove('hidden'); }
+                      });
+                    ">
+              Profil <span x-text="open === {{ forloop.counter }} ? '▲' : '▼'"></span>
+            </button>
+            {% endif %}
+          </td>
         </tr>
+        {% if c.length and c.km %}
+        <tr x-show="open === {{ forloop.counter }}" x-cloak>
+          <td colspan="6" class="!py-3">
+            <canvas x-ref="climbCanvas{{ forloop.counter }}" class="block h-32 w-full rounded bg-ink-800"></canvas>
+            <p x-ref="climbFallback{{ forloop.counter }}" class="hidden text-xs text-slate-500">
+              Profil détaillé indisponible pour ce col.
+            </p>
+          </td>
+        </tr>
+        {% endif %}
         {% endfor %}
       </tbody>
     </table>

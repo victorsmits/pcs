@@ -56,6 +56,10 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
     y: hasEle ? minEle + (hp / 100) * (maxEle - minEle) : hp,
   }));
 
+  // Exposé globalement pour le calcul des profils de cols détaillés
+  window.__elevRawPoints = pts;
+  window.__elevHasEle = hasEle;
+
   // Gradient de remplissage
   const ctx  = canvas.getContext('2d');
   const grad = ctx.createLinearGradient(0, 0, 0, 280);
@@ -260,6 +264,107 @@ Optionnels : `image_url` (repli), `progress_pct` (barre statique), `live` (barre
   canvas.addEventListener('dblclick', () => chart.resetZoom());
   canvas.style.cursor = 'zoom-in';
 })();
+</script>
+
+{# Profil détaillé d'un col : bandes de gradient km/km calculées depuis la courbe d'altitude réelle #}
+<script>
+if (!window.renderClimbGradientBars) {
+  window.renderClimbGradientBars = function (climbKm, climbLength, canvas) {
+    const pts = window.__elevRawPoints;
+    if (!canvas || !pts || !pts.length || !window.__elevHasEle || !climbLength) return false;
+
+    const startKm = Math.max(0, climbKm - climbLength);
+    const endKm = climbKm;
+
+    function elevAt(km) {
+      if (km <= pts[0].x) return pts[0].y;
+      if (km >= pts[pts.length - 1].x) return pts[pts.length - 1].y;
+      for (let i = 1; i < pts.length; i++) {
+        if (pts[i].x >= km) {
+          const p0 = pts[i - 1], p1 = pts[i];
+          const t = (km - p0.x) / (p1.x - p0.x || 1);
+          return p0.y + t * (p1.y - p0.y);
+        }
+      }
+      return pts[pts.length - 1].y;
+    }
+
+    const edges = [];
+    for (let k = startKm; k < endKm; k += 1) edges.push(k);
+    edges.push(endKm);
+    if (edges.length > 2 && (edges[edges.length - 1] - edges[edges.length - 2]) < 0.15) {
+      edges.splice(edges.length - 2, 1);
+    }
+
+    const segs = [];
+    let minE = Infinity, maxE = -Infinity;
+    for (let i = 0; i < edges.length - 1; i++) {
+      const a = edges[i], b = edges[i + 1];
+      const ea = elevAt(a), eb = elevAt(b);
+      const grad = (eb - ea) / ((b - a) * 1000) * 100;
+      segs.push({ a, b, ea, eb, grad });
+      minE = Math.min(minE, ea, eb);
+      maxE = Math.max(maxE, ea, eb);
+    }
+    if (!segs.length) return false;
+
+    function colorFor(g) {
+      if (g < 3) return '#65a30d';
+      if (g < 6) return '#eab308';
+      if (g < 8) return '#f97316';
+      if (g < 10) return '#ef4444';
+      return '#7f1d1d';
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth || 400, H = canvas.clientHeight || 130;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+
+    const padB = 20, padT = 18;
+    const plotH = H - padB - padT;
+    const eSpan = Math.max(1, maxE - minE);
+    const totalKm = endKm - startKm;
+
+    let xCursor = 0;
+    segs.forEach((s) => {
+      const segKm = s.b - s.a;
+      const segW = (segKm / totalKm) * W;
+      const y0 = padT + plotH - ((s.ea - minE) / eSpan) * plotH;
+      const y1 = padT + plotH - ((s.eb - minE) / eSpan) * plotH;
+
+      ctx.beginPath();
+      ctx.moveTo(xCursor, padT + plotH);
+      ctx.lineTo(xCursor, y0);
+      ctx.lineTo(xCursor + segW, y1);
+      ctx.lineTo(xCursor + segW, padT + plotH);
+      ctx.closePath();
+      ctx.fillStyle = colorFor(s.grad);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(2,8,23,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 9px system-ui,sans-serif';
+      ctx.textAlign = 'center';
+      const topY = Math.min(y0, y1);
+      ctx.fillText(s.grad.toFixed(1) + '%', xCursor + segW / 2, Math.max(topY - 4, padT + 9));
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8px system-ui,sans-serif';
+      ctx.fillText(Math.round(s.b - startKm), xCursor + segW / 2, H - 6);
+
+      xCursor += segW;
+    });
+    ctx.textAlign = 'left';
+
+    return true;
+  };
+}
 </script>
 
 {% elif image_url %}
