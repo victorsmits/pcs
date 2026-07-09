@@ -125,6 +125,8 @@ def keypoints_from_data(data):
     for kp in data.get('keypoints', []) or []:
         if kp.get('type') in (6, 9):  # villes / frontières
             continue
+        if not (kp.get('title') or '').strip():  # sans nom (camping-car PCS, etc.)
+            continue
         km = kp.get('km')
         out.append({
             'name': kp.get('title') or '',

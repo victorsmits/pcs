@@ -42,6 +42,8 @@ def _upcoming_keypoints(session):
         km = kp.get('km')
         if km is None:
             continue
+        if not (kp.get('title') or '').strip():  # sans nom (camping-car PCS, etc.)
+            continue
         to_go = round(km - km_done, 1)
         if to_go < -1:
             continue  # déjà passé

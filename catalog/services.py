@@ -226,7 +226,8 @@ def _sync_provisional_gc(race, t0=None):
         team = get_or_create_team(r['team_slug'], r['team_year'], r['team_name'])
         Result.objects.update_or_create(
             race=race, stage=None, rider=rider, classification=ClassificationType.GC,
-            defaults={'team': team, 'rank': r['gc_rank'], 'time_gap': '', 'status': r['status']},
+            defaults={'team': team, 'rank': r['gc_rank'],
+                      'time_gap': (r.get('time_gap') or '')[:30], 'status': r['status']},
         )
         saved += 1
     _log('results', f'{race.slug}/{race.year}/gc', SyncLog.Status.OK,
