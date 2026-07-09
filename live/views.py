@@ -1,9 +1,10 @@
 """Vues live : dashboard du jour + page live d'une étape (réactive)."""
 from datetime import date
 
+from django.db.models import F
 from django.shortcuts import render, get_object_or_404
 
-from catalog.models import Stage
+from catalog.models import ClassificationType, Result, Stage
 from catalog import services as catalog_services
 from catalog.profile_svg import build_profile_svg
 from live.models import LiveSession
@@ -41,7 +42,17 @@ def stage_live(request, slug, year, number):
     profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
                                 stage.max_elevation, max_km, climbs=climbs)
 
+    # Classement général (provisoire pendant la course, refreshé à chaque visite si en cours)
+    gc = []
+    if stage.race.is_stage_race:
+        try:
+            catalog_services.sync_gc(stage.race, force=bool(session and session.race_status == 'racing'))
+        except Exception:  # noqa: BLE001
+            pass
+        gc = list(Result.objects.filter(race=stage.race, classification=ClassificationType.GC)
+                  .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:15])
+
     return render(request, 'live/stage_live.html', {
         'stage': stage, 'race': stage.race, 'session': session,
-        'profile': profile, 'page_title': f'Live — {stage}',
+        'profile': profile, 'gc': gc, 'page_title': f'Live — {stage}',
     })

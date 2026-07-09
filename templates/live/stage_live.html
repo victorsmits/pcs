@@ -101,6 +101,18 @@
     </div>
   </div>
 
+  {# Classement général (avant l'étape du jour) #}
+  {% if gc %}
+  <div class="card card-pad">
+    <div class="mb-3 flex items-center justify-between">
+      <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">Classement général</h2>
+      <a href="{% url 'catalog:race_detail' slug=race.slug year=race.year %}#gc"
+         class="text-xs text-accent-400 hover:text-accent-300 hover:underline">Voir tout</a>
+    </div>
+    {% include 'components/results_table.html' with results=gc gap_label="Écart" %}
+  </div>
+  {% endif %}
+
   <div class="grid gap-5 lg:grid-cols-2">
     {# Situation #}
     <div class="card card-pad">
