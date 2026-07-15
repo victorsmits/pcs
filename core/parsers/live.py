@@ -4,32 +4,55 @@ import re
 
 from bs4 import BeautifulSoup
 
-from core.parsers.common import slug_from_href
+from core.parsers.common import slug_from_href, team_slug_year_from_href
 
 _DATA_RE = re.compile(r'var data = (\{.*?\});', re.DOTALL)
 _GAP_RE = re.compile(r'\+\d+:\d+')
 _TIMER_RE = re.compile(r'\b\d+[smh]\b')  # "9s", "2m", "1h" → timers PCS
 _SHOW_MORE_RE = re.compile(r'show \d+ more', re.I)
-# Classes CSS PCS à ignorer complètement lors du walk
+# Classes CSS PCS à ignorer complètement lors du walk (widgets non affichables : donut SVG…)
 _SKIP_CLASSES = frozenset({
-    'flag', 'timeago', 'timeago2', 'chartCont', 'valuebar',
+    'flag', 'timeago', 'timeago2', 'valuebar',
     'donut-chart', 'clear', 'infoSnippet', 'bib', 'svg_cross',
     'hor-line', 'vert-line', 'vert-label', 'delta-equal',
 })
 
 
-def _clean_event_html(cont):
-    """Reconstruit un HTML propre depuis .cont PCS : texte + liens coureurs.
+def _clean_stat_table(table):
+    """Nettoie un tableau de stats PCS (classement, etc.) : hrefs, barres décoratives, lignes cachées."""
+    for row in table.find_all('tr', class_='hide'):
+        row.decompose()
+    for a in table.find_all('a', href=True):
+        href = a['href']
+        if 'rider/' in href:
+            m = re.search(r'rider/([^"\'?\s]+)', href)
+            a['href'] = f'/rider/{m.group(1)}' if m else '#'
+        elif 'team/' in href:
+            slug, year = team_slug_year_from_href(href)
+            a['href'] = f'/team/{slug}/{year}/' if slug and year else '#'
+        else:
+            a['href'] = '#'
+    for bar in table.find_all(class_='valuebar'):
+        title = bar.find(class_='title')
+        bar.replace_with(title.get_text(strip=True) if title else bar.get_text(strip=True))
+    table['class'] = 'table-data'
+    for attr in ('style', 'data-id'):
+        if table.has_attr(attr):
+            del table[attr]
+    return f'<div class="overflow-x-auto">{table}</div>'
 
-    Cible uniquement .textCont (évite chartCont, timeago2, infoSnippet…).
+
+def _clean_event_html(cont):
+    """Reconstruit un HTML propre depuis .cont PCS : texte + liens coureurs + tableaux de stats.
+
+    Cible .stat (texte + tableau de classement associé, siblings dans le DOM PCS).
     Supprime les hashtags PCS (#RiderAttack…) et les boutons "show more".
     """
     if not cont:
         return ''
     from bs4 import NavigableString, Tag
 
-    # Cibler uniquement le sous-élément textCont si présent
-    target = cont.find(class_='textCont') or cont
+    target = cont.find(class_='stat') or cont
 
     parts = []
 
@@ -48,6 +71,9 @@ def _clean_event_html(cont):
             cls = set(node.get('class') or [])
             if cls & _SKIP_CLASSES:  # élément à ignorer
                 return
+            if node.name == 'table':
+                parts.append(_clean_stat_table(node))
+                return
             if node.name == 'a':
                 href = node.get('href') or ''
                 if 'rider/' in href:
@@ -65,10 +91,22 @@ def _clean_event_html(cont):
                 walk(child)
 
     walk(target)
+    # Les tableaux sérialisés sont mis de côté pendant le nettoyage regex (texte brut
+    # uniquement) pour ne jamais corrompre leur balisage.
+    tables = []
+
+    def _stash(m):
+        tables.append(m.group(0))
+        return f'\x00{len(tables) - 1}\x00'
+
     raw = ''.join(parts)
+    raw = re.sub(r'<table.*?</table>', _stash, raw, flags=re.DOTALL)
     raw = _TIMER_RE.sub('', raw)
     raw = re.sub(r'#\w+', '', raw)  # hashtags restants dans le texte brut
-    return re.sub(r' {2,}', ' ', raw).strip()
+    raw = re.sub(r' {2,}', ' ', raw).strip()
+    for i, t in enumerate(tables):
+        raw = raw.replace(f'\x00{i}\x00', t)
+    return raw
 
 
 def parse_live_data(html):
@@ -187,7 +225,7 @@ def parse_timeline(soup, limit=60):
             'seqnr': int(seqnr) if seqnr and seqnr.isdigit() else None,
             'marker': marker[:40],
             'text': text[:500],
-            'html': _clean_event_html(cont)[:3000],
+            'html': _clean_event_html(cont)[:6000],
         })
     return events
 
