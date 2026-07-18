@@ -94,3 +94,54 @@ Aucune au Lot 0.
 ### Limitations Lot 1
 - Les lectures restent majoritairement sur les modèles legacy enrichis ; le basculement complet des lectures est prévu Lot 6.
 - Les PK existantes ne sont pas modifiées ; les UUID publics sont préparés pour API et mappings futurs.
+
+## Lot 2 — Provider framework
+
+### Fichiers modifiés
+- `pcs_project/settings.py`
+- `live/api.py`
+- `providers/apps.py`
+- `providers/capabilities.py`
+- `providers/exceptions.py`
+- `providers/interfaces.py`
+- `providers/models.py`
+- `providers/registry.py`
+- `providers/http.py`
+- `providers/utils.py`
+- `providers/admin.py`
+- `providers/management/commands/list_providers.py`
+- `providers/management/commands/provider_health.py`
+- `providers/migrations/0001_initial.py`
+- `providers/migrations/0002_seed_builtin_providers.py`
+- `tests/providers/test_provider_framework_lot2.py`
+
+### Migrations créées
+- `providers/0001_initial` : tables additives `Provider`, `ProviderEntityMapping`, `ProviderSnapshot`, `ProviderRequestLog` avec index de recherche/santé/provenance.
+- `providers/0002_seed_builtin_providers` : providers intégrés `legacy-pcs` désactivé, `manual` activé, `seed` activé.
+
+### Tests ajoutés
+- `tests/providers/test_provider_framework_lot2.py` : contrat de capacités, registre et kill switch de providers, persistance mappings/snapshots, parsing `Retry-After`, exposition métier du rate limiting.
+
+### Décisions prises
+- Les capacités sont définies dans une enum `ProviderCapability` indépendante des modèles Django.
+- Les providers produisent des `ProviderBatch` sans objets Django ; les DTO métier complets seront ajoutés au Lot 3.
+- Le client HTTP provider impose HTTPS et limite l'hôte à `Provider.base_url` lorsque défini afin de réduire le risque SSRF.
+- Le provider `legacy-pcs` est créé uniquement comme provenance/mapping historique, désactivé et sans capacité.
+- Les commandes `list_providers` et `provider_health` lisent l'état connu en base sans contacter le réseau.
+
+### Limitations Lot 2
+- Le circuit breaker provider générique reste minimal ; son exploitation complète et l'orchestration avec backoff distribué sont prévues au Lot 3.
+- Les adaptateurs réels, `SeedProvider`, `ManualProvider` et `FixtureProvider` sont prévus aux lots 4 et 5.
+- Les mappings legacy PCS ne sont pas encore backfillés depuis `pcs_id`; ce point reste dans le Lot 8.
+
+### Commandes exécutées
+- `python manage.py makemigrations --check` : échec attendu initial après création de l'app providers, migrations créées puis incohérence de noms d'index corrigée.
+- `ruff check .` : échec initial sur import inutilisé legacy dans `live/api.py`, corrigé.
+- `ruff check .` : OK.
+- `pytest -q tests/providers/test_provider_framework_lot2.py` : OK, 5 passed.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : OK, 13 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Éléments restant à traiter
+- Lot 3 : DTO normalisés, validation, résolution d'identité, provenance, fusion, conflits, orchestration et commandes de synchronisation.

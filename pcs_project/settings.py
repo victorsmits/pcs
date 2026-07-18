@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'core',
     'catalog',
     'live',
+    'providers',
 ]
 
 SITE_ID = 1
@@ -177,6 +178,11 @@ PCS_CIRCUIT_BACKOFFS = tuple(int(x.strip()) for x in
 PCS_CIRCUIT_JITTER = float(os.environ.get('PCS_CIRCUIT_JITTER', '0.15'))
 PCS_403_ALERT_AFTER_SECONDS = int(os.environ.get('PCS_403_ALERT_AFTER_SECONDS', '300'))
 
+PROVIDERS_ENABLED = [p.strip() for p in os.environ.get('PROVIDERS_ENABLED', 'seed,manual').split(',') if p.strip()]
+PROVIDER_HTTP_TIMEOUT_SECONDS = float(os.environ.get('PROVIDER_HTTP_TIMEOUT_SECONDS', '20'))
+PROVIDER_DEFAULT_MAX_RETRIES = int(os.environ.get('PROVIDER_DEFAULT_MAX_RETRIES', '3'))
+PROVIDER_SNAPSHOT_RETENTION_DAYS = int(os.environ.get('PROVIDER_SNAPSHOT_RETENTION_DAYS', '30'))
+
 # ---------------------------------------------------------------------------
 # Divers
 # ---------------------------------------------------------------------------
@@ -251,5 +257,6 @@ LOGGING = {
         'core': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
         'catalog': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
         'live': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
+        'providers': {'handlers': ['console'], 'level': 'DEBUG', 'propagate': False},
     },
 }

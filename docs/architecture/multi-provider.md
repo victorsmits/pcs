@@ -29,3 +29,16 @@ Le scraping PCS est désactivé par défaut via `PCS_LEGACY_ENABLED=False`. Le p
 3. Implémenter un adaptateur DTO sans modèles Django.
 4. Ajouter fixtures hors ligne et tests de contrat.
 5. Activer explicitement le provider via configuration après validation.
+
+## Lot 2 — socle provider implémenté
+
+Le socle provider est désormais isolé dans l'application Django `providers` :
+
+- `Provider` décrit l'état connu, les capacités déclarées, l'autorité, l'attribution, les limites de débit et la santé persistée.
+- `ProviderEntityMapping` conserve les identifiants externes séparément du domaine canonique.
+- `ProviderSnapshot` conserve les payloads observés, leur hash et leur validité pour rejouer ou auditer une ingestion.
+- `ProviderRequestLog` garde une trace d'observabilité par requête autorisée.
+- `CyclingProvider` définit le contrat commun et lève `ProviderCapabilityNotSupported` lorsqu'une capacité non déclarée est appelée.
+- `ProviderHttpClient` impose HTTPS, vérifie l'hôte attendu, applique un rate limiting minimal et transforme `403`/`429` en exceptions métier sans contournement.
+
+Les providers intégrés seedés sont `seed`, `manual` et `legacy-pcs`. `legacy-pcs` reste désactivé et ne possède aucune capacité de runtime.
