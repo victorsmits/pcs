@@ -168,6 +168,14 @@ PCS_BASE_URL = 'https://www.procyclingstats.com'
 PCS_REQUEST_DELAY = float(os.environ.get('PCS_REQUEST_DELAY', '1.5'))
 PCS_LIVE_POLL_INTERVAL = int(os.environ.get('PCS_LIVE_POLL_INTERVAL', '15'))  # secondes
 
+# Circuit breaker PCS : protège PCS et nos workers en cas de blocage anti-bot persistant.
+PCS_403_THRESHOLD = int(os.environ.get('PCS_403_THRESHOLD', '2'))
+PCS_CIRCUIT_BACKOFFS = tuple(int(x.strip()) for x in
+                             os.environ.get('PCS_CIRCUIT_BACKOFFS', '60,300,900,1800,3600').split(',')
+                             if x.strip())
+PCS_CIRCUIT_JITTER = float(os.environ.get('PCS_CIRCUIT_JITTER', '0.15'))
+PCS_403_ALERT_AFTER_SECONDS = int(os.environ.get('PCS_403_ALERT_AFTER_SECONDS', '300'))
+
 # ---------------------------------------------------------------------------
 # Divers
 # ---------------------------------------------------------------------------
