@@ -1,0 +1,20 @@
+{
+  "snapshots": [
+    {"event": "race_reminder", "km_to_go": 180},
+    {"event": "race_start", "km_done": 0},
+    {"event": "attack", "km_done": 42},
+    {"event": "breakaway_created", "groups": [{"label": "Breakaway", "riders": ["Rider A", "Rider B"], "gap": "1:20"}]},
+    {"event": "gap_update", "km_done": 80, "gap": "2:10"},
+    {"event": "crash", "participants": ["Rider C"]},
+    {"event": "abandon", "participants": ["Rider C"]},
+    {"event": "climb_summit", "km_done": 130},
+    {"event": "intermediate_sprint", "km_done": 145},
+    {"event": "last_10_km", "km_to_go": 10},
+    {"event": "final_climb", "km_to_go": 6},
+    {"event": "flamme_rouge", "km_to_go": 1},
+    {"event": "finish"},
+    {"event": "stage_winner", "participants": ["Rider A"], "status": "provisional"},
+    {"event": "official_result", "participants": ["Rider A"]},
+    {"event": "result_corrected", "participants": ["Rider B"]}
+  ]
+}

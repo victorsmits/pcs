@@ -126,3 +126,21 @@ class ProviderRequestLog(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['provider', 'created_at']), models.Index(fields=['success'])]
+
+
+class ManualProviderRecord(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    capability = models.CharField(max_length=40)
+    resource_key = models.CharField(max_length=255)
+    payload = models.JSONField(default=dict, blank=True)
+    active = models.BooleanField(default=True)
+    author = models.CharField(max_length=150, blank=True)
+    justification = models.TextField(blank=True)
+    old_value = models.JSONField(default=dict, blank=True)
+    new_value = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['capability', 'resource_key']
+        indexes = [models.Index(fields=['capability', 'active']), models.Index(fields=['resource_key'])]
