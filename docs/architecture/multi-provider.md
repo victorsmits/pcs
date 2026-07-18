@@ -49,3 +49,14 @@ Les providers intégrés seedés sont `seed`, `manual` et `legacy-pcs`. `legacy-
 Le catalogue récurrent est désormais versionné dans `catalog/seeds/road_series.yaml`. Ce fichier décrit uniquement les identités de séries route élite P0 à P3 et les championnats internationaux, sans dates ni éditions. Les championnats nationaux sont générés par `seed_national_championships` pour les pays P1/P2 afin d'éviter un fichier YAML artificiellement verbeux.
 
 Le `SeedProvider` fournit la capacité `RACE_SERIES` depuis le fichier local, sans réseau. Les commandes `seed_road_series` et `seed_national_championships` sont idempotentes, transactionnelles et non destructives : elles créent ou mettent à jour les séries et alias déclarés, mais ne suppriment pas une série absente d'un seed.
+## Lot 3 — ingestion canonique implémentée
+
+L'application `ingestion` matérialise le flux provider-agnostic avant toute bascule de lecture :
+
+1. un provider produit des DTO normalisés dataclass (`NormalizedRaceSeries`, `NormalizedRider`, `NormalizedStage`, `NormalizedResult`, `NormalizedLiveEvent`) ;
+2. `IngestionOrchestrator` crée un `IngestionRun`, vérifie que le batch contient uniquement des DTO, puis délègue au moteur de fusion ;
+3. `MergeEngine` valide le DTO, persiste un `ProviderSnapshot`, résout ou crée l'identité canonique via `IdentityResolver`, met à jour `ProviderEntityMapping` et crée une `SourceObservation` ;
+4. si une valeur entrante diffère d'une valeur canonique et n'est pas plus autoritaire, `DataConflict` conserve l'écart au lieu de supprimer ou d'écraser l'information ;
+5. les commandes `sync_provider`, `list_conflicts` et `reconcile_mappings` exposent l'administration du pipeline sans accès fournisseur depuis les vues.
+
+La fusion automatique du Lot 3 est limitée aux séries et coureurs pour rester additive. Les DTO étape/résultat/live stabilisent le contrat des lots suivants sans supprimer les flux legacy tant que la parité n'est pas validée.

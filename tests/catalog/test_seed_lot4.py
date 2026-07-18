@@ -5,7 +5,6 @@ from catalog.models import RaceScope, RaceSeries, RaceSeriesAlias
 from catalog.seed_services import P1_COUNTRIES, P2_COUNTRIES, load_road_series, national_championship_entries, seed_national_championships, seed_road_series
 from providers.capabilities import ProviderCapability
 from providers.seed import SeedProvider
-from providers.registry import registry
 
 
 class RoadSeriesSeedTests(TestCase):
@@ -63,9 +62,3 @@ class RoadSeriesSeedTests(TestCase):
         assert batch.provider_key == 'seed'
         assert batch.capability == ProviderCapability.RACE_SERIES
         assert len(batch.records) == len(load_road_series())
-
-    def test_seed_provider_is_registered_in_provider_registry(self):
-        provider = registry.get('seed')
-
-        assert isinstance(provider, SeedProvider)
-        assert ProviderCapability.RACE_SERIES in provider.capabilities

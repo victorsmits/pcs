@@ -276,3 +276,73 @@ Aucune au Lot 0.
 - Lot 8 : migration legacy PCS complète et suppression des dépendances de bypass runtime.
 - Lot 9 : premier provider réel légalement exploitable si disponible.
 - Lot 10 : documentation finale, Docker/env, déploiement et rollback.
+## Validation reprise Lot 2 — 2026-07-18
+
+### Commandes exécutées
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : OK, 13 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Décisions prises
+- Le lot demandé le plus récent est le Lot 2 ; le socle provider est déjà présent sur la branche et a été revalidé sans modification fonctionnelle supplémentaire.
+
+### Éléments restant à traiter
+- Lot 3 : démarrer l'ingestion canonique (DTO, validation, résolution d'identité, provenance, fusion, conflits, orchestration, tâches et commandes).
+
+## Lot 3 — Ingestion
+
+### Fichiers modifiés
+- `pcs_project/settings.py`
+- `ingestion/apps.py`
+- `ingestion/admin.py`
+- `ingestion/dto.py`
+- `ingestion/models.py`
+- `ingestion/serialization.py`
+- `ingestion/resolver.py`
+- `ingestion/merge.py`
+- `ingestion/orchestrator.py`
+- `ingestion/tasks.py`
+- `ingestion/management/commands/sync_provider.py`
+- `ingestion/management/commands/list_conflicts.py`
+- `ingestion/management/commands/reconcile_mappings.py`
+- `ingestion/migrations/0001_initial.py`
+- `tests/ingestion/test_ingestion_lot3.py`
+
+### Migrations créées
+- `ingestion/0001_initial` : tables additives `IngestionRun`, `SourceObservation` et `DataConflict` pour tracer les synchronisations, conserver chaque observation source et exposer les conflits sans perte d'information.
+
+### Tests ajoutés
+- `tests/ingestion/test_ingestion_lot3.py` : validation DTO, création idempotente de série/rider, mapping provider, snapshot, observation source, conflit d'autorité inférieure et comptage d'un run orchestré.
+
+### Décisions prises
+- Les DTO sont des dataclasses validées et ne contiennent pas d'objet Django.
+- Le Lot 3 implémente une première fusion réelle pour `NormalizedRaceSeries` et `NormalizedRider`, suffisante pour valider le pipeline provider → DTO → snapshot → résolution identité → mapping → observation → conflit.
+- Les DTO complets `Stage`, `Result` et `LiveEvent` sont définis pour stabiliser le contrat, mais leur fusion complète reste planifiée aux lots live/catalogue suivants afin de ne pas basculer prématurément les lectures.
+- Les conflits sont conservés dans `DataConflict` au lieu d'écraser une valeur canonique avec une source moins autoritaire.
+- Les commandes d'administration d'ingestion lisent l'état local et utilisent le registre provider ; aucune vue web n'appelle ce pipeline directement.
+
+### Limitations Lot 3
+- Le moteur de fusion est volontairement conservateur : il ne fusionne automatiquement que séries et coureurs dans ce lot.
+- Le backoff distribué, les fallbacks multi-provider et les adaptateurs seed/manual/fixture complets restent dans les lots 4 et 5.
+- Les commandes `sync_edition` et `sync_live` spécialisées seront ajoutées lorsque les DTO correspondants seront branchés sur les modèles canonique/live.
+
+### Commandes exécutées
+- `ruff check ingestion tests/ingestion/test_ingestion_lot3.py --fix` : corrections automatiques d'import inutilisé.
+- `ruff check ingestion tests/ingestion/test_ingestion_lot3.py` : OK.
+- `pytest -q tests/ingestion/test_ingestion_lot3.py` : OK, 5 passed.
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : échec temporaire local causé par un schéma SQLite de développement qui avait appliqué une première version non retenue de `ingestion/0001_initial`; corrigé en recréant l'app ingestion locale sans changement de migration finale.
+- `python manage.py migrate ingestion zero --noinput` : OK, remise à zéro locale de l'app ingestion non encore livrée.
+- `python manage.py migrate --noinput` : OK, application propre de `ingestion/0001_initial`.
+- `pytest -q` : OK, 18 passed, 9 warnings de dépréciation Django/Python sans échec.
+- `ruff check .` : OK, revalidation finale.
+- `python manage.py check` : OK, revalidation finale.
+- `python manage.py makemigrations --check` : OK, revalidation finale.
+- `pytest -q` : OK, revalidation finale, 18 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Éléments restant à traiter
+- Lot 5 : providers manuel et fixture complets, démonstration de fusion multi-source, conflit et fallback live.
+- Lot 4 : seeds YAML, `SeedProvider`, séries P0 à P3 et championnats nationaux idempotents.
