@@ -1,7 +1,7 @@
 """Parsers de page étape PCS : bloc « Race information », image profil."""
 import re
 
-from core.parsers.common import parse_float, parse_int, clean_name
+from core.parsers.common import parse_float, parse_int
 
 
 def _info_dict(soup):

@@ -14,7 +14,7 @@ from core.parsers.results import parse_results_table, find_standings_table
 from core.parsers.rider import parse_rider
 from core.parsers.team import parse_team
 from catalog.models import (
-    Race, Stage, Climb, Rider, Team, Membership, Result, Category, StageType, ClassificationType,
+    Race, Stage, Climb, Rider, Team, Membership, Result, Category, ClassificationType,
 )
 
 logger = logging.getLogger('catalog')
@@ -245,16 +245,21 @@ def sync_rider(rider, force=False):
     fields = []
     for attr in ('birthdate', 'weight', 'height', 'photo_url'):
         if data.get(attr) and getattr(rider, attr) != data[attr]:
-            setattr(rider, attr, data[attr]); fields.append(attr)
+            setattr(rider, attr, data[attr])
+            fields.append(attr)
     if data.get('nationality') and not rider.nationality:
-        rider.nationality = data['nationality']; fields.append('nationality')
+        rider.nationality = data['nationality']
+        fields.append('nationality')
     if data.get('specialties'):
-        rider.specialties = data['specialties']; fields.append('specialties')
+        rider.specialties = data['specialties']
+        fields.append('specialties')
     if data.get('team_slug'):
         team = get_or_create_team(data['team_slug'], None, data.get('team_name', ''))
         if team and rider.current_team_id != team.id:
-            rider.current_team = team; fields.append('current_team')
-    rider.detail_synced_at = timezone.now(); fields.append('detail_synced_at')
+            rider.current_team = team
+            fields.append('current_team')
+    rider.detail_synced_at = timezone.now()
+    fields.append('detail_synced_at')
     rider.save(update_fields=fields)
     _log('rider', rider.slug, SyncLog.Status.OK, f'{len(data["top_results"])} résultats')
     return data

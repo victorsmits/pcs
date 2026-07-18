@@ -1,5 +1,4 @@
 """Crée les planifications Celery Beat par défaut (éditables ensuite dans l'admin)."""
-import json
 
 from django.core.management.base import BaseCommand
 from django_celery_beat.models import IntervalSchedule, CrontabSchedule, PeriodicTask
