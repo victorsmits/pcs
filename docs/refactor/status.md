@@ -146,6 +146,51 @@ Aucune au Lot 0.
 ### Éléments restant à traiter
 - Lot 3 : DTO normalisés, validation, résolution d'identité, provenance, fusion, conflits, orchestration et commandes de synchronisation.
 
+## Lot 4 — Seeds
+
+### Base de départ
+- Travail repris depuis le merge `cca358b` correspondant à l'état `origin/main` disponible localement ; aucun remote `origin` n'est configuré dans ce conteneur, donc aucun `git fetch origin` n'a pu être exécuté.
+
+### Fichiers modifiés
+- `catalog/seeds/road_series.yaml`
+- `catalog/seed_services.py`
+- `catalog/management/commands/seed_road_series.py`
+- `catalog/management/commands/seed_national_championships.py`
+- `providers/seed.py`
+- `tests/catalog/test_seed_lot4.py`
+- `docs/refactor/status.md`
+
+### Migrations créées
+- Aucune migration : le lot s'appuie sur les modèles additifs `RaceSeries` et `RaceSeriesAlias` déjà introduits.
+
+### Tests ajoutés
+- `tests/catalog/test_seed_lot4.py` : présence des priorités P0/P1/P2/P3, championnats monde/europe/olympiques, idempotence du seed route, alias de séries, génération des championnats nationaux P1/P2 et provider seed hors réseau.
+
+### Décisions prises
+- `catalog/seeds/road_series.yaml` contient les séries P0 à P3 sans dates ni éditions annuelles.
+- Le parser YAML est volontairement restreint au format versionné du dépôt pour éviter une nouvelle dépendance runtime et garder les tests hors réseau.
+- `seed_road_series` et `seed_national_championships` sont transactionnels, idempotents et non destructifs : une absence dans le YAML ne supprime jamais une série existante.
+- `SeedProvider` expose la capacité `RACE_SERIES` en lecture locale du fichier seed, sans appel réseau.
+- Les championnats nationaux créent quatre séries par pays P1/P2 : ME/WE route et ME/WE ITT.
+
+### Limitations Lot 4
+- Les séries nationales ne sont pas incluses dans le YAML route principal ; elles sont générées par commande dédiée conformément au cahier.
+- L'ingestion automatique du `SeedProvider` vers le moteur Lot 3 n'est pas branchée ici parce que la demande explicite était de reprendre depuis `origin/main`, qui ne contient pas le Lot 3 non retenu.
+
+### Commandes exécutées
+- `git fetch origin` : échec, aucun remote `origin` configuré dans le conteneur.
+- `git reset --hard cca358b` : OK, reprise depuis l'état main disponible localement.
+- `ruff check catalog/seed_services.py catalog/management/commands/seed_road_series.py catalog/management/commands/seed_national_championships.py providers/seed.py tests/catalog/test_seed_lot4.py` : OK.
+- `pytest -q tests/catalog/test_seed_lot4.py` : échec initial car `PyYAML` n'était pas installé ; corrigé par parser YAML restreint sans dépendance.
+- `pytest -q tests/catalog/test_seed_lot4.py` : OK, 5 passed.
+- `python manage.py seed_road_series` : OK, created=103 updated=0 aliases_created=111 aliases_updated=0.
+- `python manage.py seed_road_series` : OK, created=0 updated=103 aliases_created=0 aliases_updated=111.
+- `python manage.py seed_national_championships` : OK, created=120 updated=0 aliases_created=120 aliases_updated=0.
+- `python manage.py seed_national_championships` : OK, created=0 updated=120 aliases_created=0 aliases_updated=120.
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : échec temporaire car la base SQLite locale avait été seedée avant les tests ; tests rendus robustes aux données seed déjà présentes.
 ## Validation reprise Lot 2 — 2026-07-18
 
 ### Commandes exécutées
@@ -214,4 +259,5 @@ Aucune au Lot 0.
 - `pytest -q` : OK, revalidation finale, 18 passed, 9 warnings de dépréciation Django/Python sans échec.
 
 ### Éléments restant à traiter
+- Lot 5 : providers manuel et fixture complets, démonstration de fusion multi-source, conflit et fallback live.
 - Lot 4 : seeds YAML, `SeedProvider`, séries P0 à P3 et championnats nationaux idempotents.

@@ -1,0 +1,935 @@
+- slug: tour-de-france
+  name: Tour de France
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: giro-ditalia
+  name: Giro d'Italia
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: vuelta-a-espana
+  name: Vuelta a España
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: milano-sanremo
+  name: Milano-Sanremo
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: ronde-van-vlaanderen
+  name: Ronde van Vlaanderen
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: paris-roubaix
+  name: Paris-Roubaix
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: liege-bastogne-liege
+  name: Liège-Bastogne-Liège
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: il-lombardia
+  name: Il Lombardia
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: tour-de-france-femmes
+  name: Tour de France Femmes
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: giro-ditalia-women
+  name: Giro d'Italia Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: vuelta-espana-femenina
+  name: Vuelta España Femenina
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: ronde-van-vlaanderen-women
+  name: Ronde van Vlaanderen Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: paris-roubaix-femmes
+  name: Paris-Roubaix Femmes
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: liege-bastogne-liege-femmes
+  name: Liège-Bastogne-Liège Femmes
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: strade-bianche-donne
+  name: Strade Bianche Donne
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: milano-sanremo-donne
+  name: Milano-Sanremo Donne
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P0
+  countries: []
+  aliases: []
+- slug: world-championship:ME:road-race
+  name: World Championship ME Road Race
+  category: ME
+  discipline: road
+  format: championship_road_race
+  scope: world_championship
+  priority: P0
+  countries: []
+  aliases: []
+- slug: world-championship:ME:itt
+  name: World Championship ME ITT
+  category: ME
+  discipline: road
+  format: championship_itt
+  scope: world_championship
+  priority: P0
+  countries: []
+  aliases: []
+- slug: world-championship:WE:road-race
+  name: World Championship WE Road Race
+  category: WE
+  discipline: road
+  format: championship_road_race
+  scope: world_championship
+  priority: P0
+  countries: []
+  aliases: []
+- slug: world-championship:WE:itt
+  name: World Championship WE ITT
+  category: WE
+  discipline: road
+  format: championship_itt
+  scope: world_championship
+  priority: P0
+  countries: []
+  aliases: []
+- slug: olympic-games:ME:road-race
+  name: Olympic Games ME Road Race
+  category: ME
+  discipline: road
+  format: championship_road_race
+  scope: olympic
+  priority: P0
+  countries: []
+  aliases: []
+- slug: olympic-games:ME:itt
+  name: Olympic Games ME ITT
+  category: ME
+  discipline: road
+  format: championship_itt
+  scope: olympic
+  priority: P0
+  countries: []
+  aliases: []
+- slug: olympic-games:WE:road-race
+  name: Olympic Games WE Road Race
+  category: WE
+  discipline: road
+  format: championship_road_race
+  scope: olympic
+  priority: P0
+  countries: []
+  aliases: []
+- slug: olympic-games:WE:itt
+  name: Olympic Games WE ITT
+  category: WE
+  discipline: road
+  format: championship_itt
+  scope: olympic
+  priority: P0
+  countries: []
+  aliases: []
+- slug: european-championship:ME:road-race
+  name: European Championship ME Road Race
+  category: ME
+  discipline: road
+  format: championship_road_race
+  scope: continental_championship
+  priority: P1
+  countries: []
+  aliases: []
+- slug: european-championship:ME:itt
+  name: European Championship ME ITT
+  category: ME
+  discipline: road
+  format: championship_itt
+  scope: continental_championship
+  priority: P1
+  countries: []
+  aliases: []
+- slug: european-championship:WE:road-race
+  name: European Championship WE Road Race
+  category: WE
+  discipline: road
+  format: championship_road_race
+  scope: continental_championship
+  priority: P1
+  countries: []
+  aliases: []
+- slug: european-championship:WE:itt
+  name: European Championship WE ITT
+  category: WE
+  discipline: road
+  format: championship_itt
+  scope: continental_championship
+  priority: P1
+  countries: []
+  aliases: []
+- slug: paris-nice
+  name: Paris-Nice
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tirreno-adriatico
+  name: Tirreno-Adriatico
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: volta-ciclista-a-catalunya
+  name: Volta Ciclista a Catalunya
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: itzulia-basque-country
+  name: Itzulia Basque Country
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tour-de-romandie
+  name: Tour de Romandie
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: criterium-du-dauphine
+  name: Critérium du Dauphiné
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tour-de-suisse
+  name: Tour de Suisse
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: omloop-het-nieuwsblad
+  name: Omloop Het Nieuwsblad
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: strade-bianche
+  name: Strade Bianche
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: e3-saxo-classic
+  name: E3 Saxo Classic
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: gent-wevelgem
+  name: Gent-Wevelgem
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: dwars-door-vlaanderen
+  name: Dwars door Vlaanderen
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: amstel-gold-race
+  name: Amstel Gold Race
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: fleche-wallonne
+  name: Flèche Wallonne
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: clasica-san-sebastian
+  name: Clásica San Sebastián
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: grand-prix-cycliste-de-quebec
+  name: Grand Prix Cycliste de Québec
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: grand-prix-cycliste-de-montreal
+  name: Grand Prix Cycliste de Montréal
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: itzulia-women
+  name: Itzulia Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: vuelta-a-burgos-feminas
+  name: Vuelta a Burgos Féminas
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tour-de-suisse-women
+  name: Tour de Suisse Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tour-de-romandie-feminin
+  name: Tour de Romandie Féminin
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: tour-of-britain-women
+  name: Tour of Britain Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: omloop-het-nieuwsblad-women
+  name: Omloop Het Nieuwsblad Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: trofeo-alfredo-binda
+  name: Trofeo Alfredo Binda
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: gent-wevelgem-women
+  name: Gent-Wevelgem Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: dwars-door-vlaanderen-women
+  name: Dwars door Vlaanderen Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: amstel-gold-race-women
+  name: Amstel Gold Race Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: fleche-wallonne-feminine
+  name: Flèche Wallonne Féminine
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P1
+  countries: []
+  aliases: []
+- slug: santos-tour-down-under
+  name: Santos Tour Down Under
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: cadel-evans-great-ocean-road-race
+  name: Cadel Evans Great Ocean Road Race
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: uae-tour
+  name: UAE Tour
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: great-sprint-classic
+  name: Great Sprint Classic
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases:
+    - The Great Sprint Classic
+    - Classic Brugge-De Panne
+    - Driedaagse Brugge-De Panne
+- slug: eschborn-frankfurt
+  name: Eschborn-Frankfurt
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: copenhagen-sprint
+  name: Copenhagen Sprint
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: tour-de-pologne
+  name: Tour de Pologne
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: adac-cyclassics
+  name: ADAC Cyclassics
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases:
+    - BEMER Cyclassics
+    - Hamburg Cyclassics
+- slug: renewi-tour
+  name: Renewi Tour
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases:
+    - Benelux Tour
+    - BinckBank Tour
+    - Eneco Tour
+- slug: bretagne-classic
+  name: Bretagne Classic
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: tour-of-guangxi
+  name: Tour of Guangxi
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: santos-tour-down-under-women
+  name: Santos Tour Down Under Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: cadel-evans-great-ocean-road-race-women
+  name: Cadel Evans Great Ocean Road Race Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: uae-tour-women
+  name: UAE Tour Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: great-sprint-classic-women
+  name: Great Sprint Classic Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: copenhagen-sprint-women
+  name: Copenhagen Sprint Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: classic-lorient-agglomeration
+  name: Classic Lorient Agglomération
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: tour-of-chongming-island
+  name: Tour of Chongming Island
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: tour-of-guangxi-women
+  name: Tour of Guangxi Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P2
+  countries: []
+  aliases: []
+- slug: volta-ao-algarve
+  name: Volta ao Algarve
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-of-oman
+  name: Tour of Oman
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: alula-tour
+  name: AlUla Tour
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-of-the-alps
+  name: Tour of the Alps
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: deutschland-tour
+  name: Deutschland Tour
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-of-britain
+  name: Tour of Britain
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-de-wallonie
+  name: Tour de Wallonie
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: quatre-jours-de-dunkerque
+  name: Quatre Jours de Dunkerque
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: arctic-race-of-norway
+  name: Arctic Race of Norway
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-of-norway
+  name: Tour of Norway
+  category: ME
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: kuurne-bruxelles-kuurne
+  name: Kuurne-Bruxelles-Kuurne
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: le-samyn
+  name: Le Samyn
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: scheldeprijs
+  name: Scheldeprijs
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: brabantse-pijl
+  name: Brabantse Pijl
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: milano-torino
+  name: Milano-Torino
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: giro-dell-emilia
+  name: Giro dell’Emilia
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: gran-piemonte
+  name: Gran Piemonte
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tre-valli-varesine
+  name: Tre Valli Varesine
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: paris-tours
+  name: Paris-Tours
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: japan-cup
+  name: Japan Cup
+  category: ME
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: simac-ladies-tour
+  name: Simac Ladies Tour
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-of-scandinavia
+  name: Tour of Scandinavia
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: thuringen-ladies-tour
+  name: Thüringen Ladies Tour
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-de-belgique-women
+  name: Tour de Belgique Women
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: tour-feminin-international-des-pyrenees
+  name: Tour Féminin International des Pyrénées
+  category: WE
+  discipline: road
+  format: stage_race
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: nokere-koerse-women
+  name: Nokere Koerse Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: scheldeprijs-women
+  name: Scheldeprijs Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []
+- slug: brabantse-pijl-women
+  name: Brabantse Pijl Women
+  category: WE
+  discipline: road
+  format: one_day
+  scope: regular
+  priority: P3
+  countries: []
+  aliases: []

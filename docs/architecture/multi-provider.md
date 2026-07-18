@@ -44,6 +44,11 @@ Le socle provider est désormais isolé dans l'application Django `providers` :
 Les providers intégrés seedés sont `seed`, `manual` et `legacy-pcs`. `legacy-pcs` reste désactivé et ne possède aucune capacité de runtime.
 
 
+## Lot 4 — catalogue seedé
+
+Le catalogue récurrent est désormais versionné dans `catalog/seeds/road_series.yaml`. Ce fichier décrit uniquement les identités de séries route élite P0 à P3 et les championnats internationaux, sans dates ni éditions. Les championnats nationaux sont générés par `seed_national_championships` pour les pays P1/P2 afin d'éviter un fichier YAML artificiellement verbeux.
+
+Le `SeedProvider` fournit la capacité `RACE_SERIES` depuis le fichier local, sans réseau. Les commandes `seed_road_series` et `seed_national_championships` sont idempotentes, transactionnelles et non destructives : elles créent ou mettent à jour les séries et alias déclarés, mais ne suppriment pas une série absente d'un seed.
 ## Lot 3 — ingestion canonique implémentée
 
 L'application `ingestion` matérialise le flux provider-agnostic avant toute bascule de lecture :
