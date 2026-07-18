@@ -42,3 +42,16 @@ Le socle provider est désormais isolé dans l'application Django `providers` :
 - `ProviderHttpClient` impose HTTPS, vérifie l'hôte attendu, applique un rate limiting minimal et transforme `403`/`429` en exceptions métier sans contournement.
 
 Les providers intégrés seedés sont `seed`, `manual` et `legacy-pcs`. `legacy-pcs` reste désactivé et ne possède aucune capacité de runtime.
+
+
+## Lot 3 — ingestion canonique implémentée
+
+L'application `ingestion` matérialise le flux provider-agnostic avant toute bascule de lecture :
+
+1. un provider produit des DTO normalisés dataclass (`NormalizedRaceSeries`, `NormalizedRider`, `NormalizedStage`, `NormalizedResult`, `NormalizedLiveEvent`) ;
+2. `IngestionOrchestrator` crée un `IngestionRun`, vérifie que le batch contient uniquement des DTO, puis délègue au moteur de fusion ;
+3. `MergeEngine` valide le DTO, persiste un `ProviderSnapshot`, résout ou crée l'identité canonique via `IdentityResolver`, met à jour `ProviderEntityMapping` et crée une `SourceObservation` ;
+4. si une valeur entrante diffère d'une valeur canonique et n'est pas plus autoritaire, `DataConflict` conserve l'écart au lieu de supprimer ou d'écraser l'information ;
+5. les commandes `sync_provider`, `list_conflicts` et `reconcile_mappings` exposent l'administration du pipeline sans accès fournisseur depuis les vues.
+
+La fusion automatique du Lot 3 est limitée aux séries et coureurs pour rester additive. Les DTO étape/résultat/live stabilisent le contrat des lots suivants sans supprimer les flux legacy tant que la parité n'est pas validée.

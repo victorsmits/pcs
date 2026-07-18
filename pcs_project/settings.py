@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'catalog',
     'live',
     'providers',
+    'ingestion',
 ]
 
 SITE_ID = 1
