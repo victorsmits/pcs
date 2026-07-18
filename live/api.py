@@ -100,10 +100,34 @@ def _serialize(session):
 
 
 def stage_live_data(request, slug, year, number):
-    stage = get_object_or_404(Stage, race__slug=slug, race__year=year, number=number)
+    """Return the locally stored live state, or a graceful unavailable payload.
+
+    The public polling endpoint must keep working when no provider is active, when
+    a stage has not been ingested yet, or when no live session exists. Returning
+    HTTP 200 avoids noisy 404 logs and lets the front-end display degraded state.
+    """
+    stage = Stage.objects.filter(race__slug=slug, race__year=year, number=number).first()
+    if not stage:
+        race = Race.objects.filter(slug=slug, year=year).first()
+        return JsonResponse({
+            'available': False,
+            'reason': 'stage_not_available_locally',
+            'slug': slug,
+            'year': year,
+            'stage': number,
+            'race': race.name if race else '',
+        })
+
     session = LiveSession.objects.filter(stage=stage).first()
     if not session:
-        return JsonResponse({'available': False}, status=404)
+        return JsonResponse({
+            'available': False,
+            'reason': 'live_session_not_available_locally',
+            'slug': slug,
+            'year': year,
+            'stage': number,
+            'race': stage.race.name,
+        })
     _maybe_refresh(session)
     return JsonResponse(_serialize(session))
 
