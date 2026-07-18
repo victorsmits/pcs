@@ -94,3 +94,4 @@ Aucune au Lot 0.
 ### Limitations Lot 1
 - Les lectures restent majoritairement sur les modèles legacy enrichis ; le basculement complet des lectures est prévu Lot 6.
 - Les PK existantes ne sont pas modifiées ; les UUID publics sont préparés pour API et mappings futurs.
+=======
