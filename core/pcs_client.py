@@ -10,7 +10,21 @@ from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import cache
 
+from core import pcs_circuit
+
 logger = logging.getLogger('core')
+
+
+class PCSAccessForbiddenError(Exception):
+    """Levée quand ProCyclingStats répond explicitement HTTP 403."""
+
+    def __init__(self, url, retry_after=None):
+        self.url = url
+        self.retry_after = retry_after
+        super().__init__(f'PCS returned HTTP 403 for {url}')
+
+
+PCSCircuitOpenError = pcs_circuit.PCSCircuitOpenError
 
 PCS_BASE_URL = settings.PCS_BASE_URL
 
@@ -67,7 +81,19 @@ def reset_session():
 
 
 def fetch_text(url, *, cache_ttl=3600, referer=None, force=False, max_retries=3):
-    """Récupère le texte brut d'une URL PCS (avec cache + retries). Renvoie str ou None."""
+    """Récupère le texte brut d'une URL PCS (avec cache + circuit breaker)."""
+    state = pcs_circuit.current_state()
+    if state.open:
+        logger.warning(
+            'Fetch PCS ignoré: circuit ouvert',
+            extra={
+                'event': 'pcs_fetch_skipped', 'url': url,
+                'consecutive_failures': state.failure_count,
+                'circuit_state': 'open', 'retry_after': state.retry_after,
+            },
+        )
+        raise PCSCircuitOpenError(state.retry_after)
+
     cache_key = f'pcs_text::{url}'
     if not force and cache_ttl:
         cached = cache.get(cache_key)
@@ -76,26 +102,53 @@ def fetch_text(url, *, cache_ttl=3600, referer=None, force=False, max_retries=3)
 
     session = _get_session()
     delay = settings.PCS_REQUEST_DELAY
-    for attempt in range(max_retries):
+    for attempt in range(1, max_retries + 1):
         try:
-            time.sleep(delay + attempt * 2)
+            time.sleep(delay + (attempt - 1) * 2)
             if referer:
                 session.headers['Referer'] = referer
             resp = session.get(url, timeout=25)
+            status_code = getattr(resp, 'status_code', None)
+            if status_code == 403:
+                state = pcs_circuit.record_forbidden(url, attempt=attempt, status_code=403)
+                reset_session()
+                raise PCSAccessForbiddenError(url, retry_after=state.retry_after)
             resp.raise_for_status()
             text = resp.text
+            pcs_circuit.record_success(url)
             if cache_ttl:
                 cache.set(cache_key, text, cache_ttl)
             return text
+        except PCSAccessForbiddenError:
+            raise
         except Exception as exc:  # noqa: BLE001
             msg = str(exc)
-            if '403' in msg and attempt < max_retries - 1:
-                logger.info('403 sur %s (essai %d/%d), reset session…', url, attempt + 1, max_retries)
+            status_code = getattr(getattr(exc, 'response', None), 'status_code', None)
+            if status_code == 403 or '403' in msg:
+                state = pcs_circuit.record_forbidden(url, attempt=attempt, status_code=403)
                 reset_session()
-                session = _get_session()
+                raise PCSAccessForbiddenError(url, retry_after=state.retry_after) from exc
+            if attempt < max_retries:
+                logger.warning(
+                    'Échec temporaire fetch PCS',
+                    extra={
+                        'event': 'pcs_temporary_network_failure', 'url': url,
+                        'attempt': attempt, 'status_code': status_code,
+                        'consecutive_failures': pcs_circuit.current_state().failure_count,
+                        'circuit_state': 'closed', 'retry_after': None,
+                    },
+                )
                 continue
             if '404' not in msg and '500' not in msg:
-                logger.warning('Échec fetch %s: %s', url, exc)
+                logger.warning(
+                    'Échec fetch PCS définitif',
+                    extra={
+                        'event': 'pcs_functional_failure', 'url': url,
+                        'attempt': attempt, 'status_code': status_code,
+                        'consecutive_failures': pcs_circuit.current_state().failure_count,
+                        'circuit_state': 'closed', 'retry_after': None,
+                    },
+                )
             return None
     return None
 
@@ -130,14 +183,24 @@ def fetch_bytes(url, *, cache_ttl=86400, force=False):
         if cached is not None:
             return base64.b64decode(cached)
     session = _get_session()
+    state = pcs_circuit.current_state()
+    if state.open:
+        raise PCSCircuitOpenError(state.retry_after)
     try:
         time.sleep(settings.PCS_REQUEST_DELAY)
         resp = session.get(url, timeout=25)
+        if getattr(resp, 'status_code', None) == 403:
+            state = pcs_circuit.record_forbidden(url, attempt=1, status_code=403)
+            reset_session()
+            raise PCSAccessForbiddenError(url, retry_after=state.retry_after)
         resp.raise_for_status()
+        pcs_circuit.record_success(url)
         content = resp.content
         if cache_ttl:
             cache.set(cache_key, base64.b64encode(content).decode(), cache_ttl)
         return content
+    except (PCSAccessForbiddenError, PCSCircuitOpenError):
+        raise
     except Exception as exc:  # noqa: BLE001
         logger.warning('Échec fetch_bytes %s: %s', url, exc)
         return None
