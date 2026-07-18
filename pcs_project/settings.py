@@ -162,8 +162,9 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
 
 # ---------------------------------------------------------------------------
-# PCS scraping
+# Legacy PCS access (disabled by default; kept only for temporary local compatibility)
 # ---------------------------------------------------------------------------
+PCS_LEGACY_ENABLED = os.environ.get('PCS_LEGACY_ENABLED', 'False') == 'True'
 PCS_BASE_URL = 'https://www.procyclingstats.com'
 PCS_REQUEST_DELAY = float(os.environ.get('PCS_REQUEST_DELAY', '1.5'))
 PCS_LIVE_POLL_INTERVAL = int(os.environ.get('PCS_LIVE_POLL_INTERVAL', '15'))  # secondes

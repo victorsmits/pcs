@@ -1,5 +1,4 @@
-"""Recherche globale : base locale (instantané) + PCS (exhaustif)."""
-from django.db.models import Q
+"""Recherche locale provider-agnostic. Aucun accès fournisseur depuis le web."""
 
 from catalog.models import Rider, Team, Race
 
@@ -38,33 +37,6 @@ def search_local(q, limit=6):
     }
 
 
-def search_pcs(q, limit=6):
-    """Recherche sur PCS (résultats globaux). Crée les entités stub pour navigation."""
-    from core import pcs_client
-    from core.parsers.search import parse_search
-    from catalog.services import get_or_create_rider, get_or_create_team
-    soup = pcs_client.get_soup(f'{pcs_client.PCS_BASE_URL}/search.php?term={q}',
-                               cache_ttl=3600)
-    if not soup:
-        return {'riders': [], 'teams': [], 'races': []}
-    parsed = parse_search(soup, limit)
-    out = {'riders': [], 'teams': [], 'races': []}
-    for r in parsed['riders']:
-        rider = get_or_create_rider(r['slug'], r['name'])
-        if rider:
-            out['riders'].append(_rider_dict(rider))
-    for t in parsed['teams']:
-        team = get_or_create_team(t['slug'], t['year'], t['name'])
-        if team:
-            out['teams'].append(_team_dict(team))
-    for c in parsed['races']:
-        race = Race.objects.filter(slug=c['slug'], year=c['year']).first()
-        out['races'].append(_race_dict(race) if race else {
-            'type': 'race', 'name': c['name'], 'year': c['year'],
-            'url': f"/race/{c['slug']}/{c['year']}/", 'subtitle': f"Course · {c['year']}"})
-    return out
-
-
 def _merge(a, b, limit):
     """Fusionne deux jeux de résultats en dédupliquant par URL."""
     out = {}
@@ -79,15 +51,5 @@ def _merge(a, b, limit):
     return out
 
 
-def search_all(q, limit=6, include_pcs=True):
-    local = search_local(q, limit)
-    if not include_pcs:
-        return local
-    total = sum(len(local[k]) for k in local)
-    # On complète avec PCS si le local est maigre (recherche globale)
-    if total < limit:
-        try:
-            return _merge(local, search_pcs(q, limit), limit)
-        except Exception:  # noqa: BLE001
-            return local
-    return local
+def search_all(q, limit=6, include_pcs=False):
+    return search_local(q, limit)
