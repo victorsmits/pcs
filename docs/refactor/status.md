@@ -58,3 +58,40 @@ Aucune au Lot 0.
 
 ## Éléments restant à traiter
 - Lot 1 : introduire le domaine canonique additif (`RaceSeries`, alias, UUID publics, `TeamIdentity`, champs d'étapes/résultats) et tests de migration.
+
+## Lot 1 — Domaine canonique additif
+
+### Fichiers modifiés
+- `catalog/models.py`
+- `catalog/migrations/0006_teamidentity_race_finish_location_race_host_country_and_more.py`
+- `catalog/migrations/0007_backfill_canonical_lot1.py`
+- `tests/test_catalog_lot1_canonical_backfill.py`
+- `docs/refactor/status.md`
+
+### Migrations créées
+- `0006` : ajoute `RaceSeries`, `RaceSeriesAlias`, `TeamIdentity`, UUID publics additifs et champs canoniques préparatoires sur `Race`, `Stage`, `StartListEntry`, `Result`, `Rider`, `Team`.
+- `0007` : backfill non destructif des séries depuis `Race.slug`, alias de noms historiques, identités d'équipes, UUID publics par ligne, champs d'étape et temps de résultats normalisés.
+
+### Tests ajoutés
+- `tests/test_catalog_lot1_canonical_backfill.py` : vérifie le backfill d'une course legacy vers série/alias, identité d'équipe, UUID/champs canoniques, étape ITT et temps normalisé.
+
+### Décisions prises
+- Les contraintes d'unicité sur UUID publics des tables legacy seront renforcées dans un lot ultérieur afin de respecter l'ordre additif demandé.
+- `Race` reste la table d'édition legacy compatible et reçoit un FK nullable vers `RaceSeries`.
+- `Team` reste la saison legacy compatible et reçoit un FK nullable vers `TeamIdentity`.
+
+### Commandes exécutées
+- `python manage.py makemigrations catalog --noinput` : OK, migration `0006` créée.
+- `python manage.py migrate` : OK, migrations `0006` et `0007` appliquées localement.
+- `ruff check tests/test_catalog_lot1_canonical_backfill.py` : OK.
+- `pytest -q tests/test_catalog_lot1_canonical_backfill.py` : OK, 1 passed.
+- `ruff check .` : échec initial sur un import inutilisé dans la migration `0007`, corrigé immédiatement.
+- `ruff check .` : OK après correction.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : OK, 6 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Limitations Lot 1
+- Les lectures restent majoritairement sur les modèles legacy enrichis ; le basculement complet des lectures est prévu Lot 6.
+- Les PK existantes ne sont pas modifiées ; les UUID publics sont préparés pour API et mappings futurs.
+=======
