@@ -145,3 +145,134 @@ Aucune au Lot 0.
 
 ### Éléments restant à traiter
 - Lot 3 : DTO normalisés, validation, résolution d'identité, provenance, fusion, conflits, orchestration et commandes de synchronisation.
+
+## Lot 4 — Seeds
+
+### Base de départ
+- Travail repris depuis le merge `cca358b` correspondant à l'état `origin/main` disponible localement ; aucun remote `origin` n'est configuré dans ce conteneur, donc aucun `git fetch origin` n'a pu être exécuté.
+
+### Fichiers modifiés
+- `catalog/seeds/road_series.yaml`
+- `catalog/seed_services.py`
+- `catalog/management/commands/seed_road_series.py`
+- `catalog/management/commands/seed_national_championships.py`
+- `providers/seed.py`
+- `tests/catalog/test_seed_lot4.py`
+- `docs/refactor/status.md`
+
+### Migrations créées
+- Aucune migration : le lot s'appuie sur les modèles additifs `RaceSeries` et `RaceSeriesAlias` déjà introduits.
+
+### Tests ajoutés
+- `tests/catalog/test_seed_lot4.py` : présence des priorités P0/P1/P2/P3, championnats monde/europe/olympiques, idempotence du seed route, alias de séries, génération des championnats nationaux P1/P2 et provider seed hors réseau.
+
+### Décisions prises
+- `catalog/seeds/road_series.yaml` contient les séries P0 à P3 sans dates ni éditions annuelles.
+- Le parser YAML est volontairement restreint au format versionné du dépôt pour éviter une nouvelle dépendance runtime et garder les tests hors réseau.
+- `seed_road_series` et `seed_national_championships` sont transactionnels, idempotents et non destructifs : une absence dans le YAML ne supprime jamais une série existante.
+- `SeedProvider` expose la capacité `RACE_SERIES` en lecture locale du fichier seed, sans appel réseau.
+- Les championnats nationaux créent quatre séries par pays P1/P2 : ME/WE route et ME/WE ITT.
+
+### Limitations Lot 4
+- Les séries nationales ne sont pas incluses dans le YAML route principal ; elles sont générées par commande dédiée conformément au cahier.
+- L'ingestion automatique du `SeedProvider` vers le moteur Lot 3 n'est pas branchée ici parce que la demande explicite était de reprendre depuis `origin/main`, qui ne contient pas le Lot 3 non retenu.
+
+### Commandes exécutées
+- `git fetch origin` : échec, aucun remote `origin` configuré dans le conteneur.
+- `git reset --hard cca358b` : OK, reprise depuis l'état main disponible localement.
+- `ruff check catalog/seed_services.py catalog/management/commands/seed_road_series.py catalog/management/commands/seed_national_championships.py providers/seed.py tests/catalog/test_seed_lot4.py` : OK.
+- `pytest -q tests/catalog/test_seed_lot4.py` : échec initial car `PyYAML` n'était pas installé ; corrigé par parser YAML restreint sans dépendance.
+- `pytest -q tests/catalog/test_seed_lot4.py` : OK, 5 passed.
+- `python manage.py seed_road_series` : OK, created=103 updated=0 aliases_created=111 aliases_updated=0.
+- `python manage.py seed_road_series` : OK, created=0 updated=103 aliases_created=0 aliases_updated=111.
+- `python manage.py seed_national_championships` : OK, created=120 updated=0 aliases_created=120 aliases_updated=0.
+- `python manage.py seed_national_championships` : OK, created=0 updated=120 aliases_created=0 aliases_updated=120.
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : échec temporaire car la base SQLite locale avait été seedée avant les tests ; tests rendus robustes aux données seed déjà présentes.
+- `pytest -q` : OK, 18 passed, 9 warnings de dépréciation Django/Python sans échec.
+- `ruff check .` : OK, revalidation finale.
+- `python manage.py check` : OK, revalidation finale.
+- `python manage.py makemigrations --check` : OK, revalidation finale.
+- `pytest -q` : OK, revalidation finale, 18 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Éléments restant à traiter
+- Lot 5 : providers manuel et fixture complets, démonstration de fusion multi-source, conflit et fallback live.
+
+## Lot 4 — Finalisation SeedProvider
+
+### Fichiers modifiés
+- `providers/interfaces.py`
+- `providers/registry.py`
+- `providers/apps.py`
+- `tests/catalog/test_seed_lot4.py`
+- `docs/refactor/status.md`
+
+### Décisions prises
+- Le contrat provider expose maintenant explicitement `fetch_race_series()` pour la capacité `RACE_SERIES` au lieu de laisser le `SeedProvider` porter une méthode hors interface.
+- `SeedProvider` est enregistré au démarrage dans le registre provider pour être consommable par le framework Lot 2 sans instanciation manuelle.
+- Le registre accepte un test d'appartenance afin d'éviter les doubles enregistrements lors des rechargements Django.
+
+### Tests ajoutés
+- Extension de `tests/catalog/test_seed_lot4.py` pour vérifier que `SeedProvider` est disponible via le registre provider.
+
+### Commandes exécutées
+- `ruff check providers/interfaces.py providers/registry.py providers/apps.py providers/seed.py tests/catalog/test_seed_lot4.py` : OK.
+- `pytest -q tests/catalog/test_seed_lot4.py` : OK, 6 passed.
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : OK, 19 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+## Lot 5 — Providers manuel et fixtures
+
+### Fichiers modifiés
+- `providers/models.py`
+- `providers/admin.py`
+- `providers/apps.py`
+- `providers/manual.py`
+- `providers/fixture.py`
+- `providers/migrations/0003_manualproviderrecord.py`
+- `tests/fixtures/providers/complete_race/race_series.json`
+- `tests/fixtures/providers/complete_race/live.json`
+- `tests/fixtures/providers/conflict_source/race_series.json`
+- `tests/fixtures/providers/conflict_source/live.json`
+- `tests/fixtures/providers/failing_403/race_series.json`
+- `tests/fixtures/providers/failing_403/live.json`
+- `tests/fixtures/providers/invalid_payload/race_series.json`
+- `tests/fixtures/providers/invalid_payload/live.json`
+- `tests/providers/test_manual_fixture_providers_lot5.py`
+- `docs/refactor/status.md`
+
+### Migrations créées
+- `providers/0003_manualproviderrecord` : table additive pour corrections manuelles provider, payload validé, justification, auteur et anciennes/nouvelles valeurs.
+
+### Tests ajoutés
+- `tests/providers/test_manual_fixture_providers_lot5.py` : provider manuel, fixture live complète, payload conflictuel multi-source, panne `403`, payload invalide, fallback live et enregistrement registry.
+
+### Décisions prises
+- `ManualProvider` lit uniquement des `ManualProviderRecord` actifs et ne contacte aucun réseau.
+- `FixtureProvider` rejoue des fichiers JSON locaux et simule explicitement les erreurs `403`, payload invalide et fallback.
+- La fixture `complete_race` couvre une séquence de course complète minimale : rappel, départ, attaque, échappée, écart, chute, abandon, col, sprint, derniers kilomètres, montée finale, flamme rouge, arrivée, vainqueur provisoire, résultat officiel et correction.
+- `fetch_with_fallback` prouve la bascule vers une fixture secondaire sans masquer les erreurs provider.
+
+### Limitations Lot 5
+- Le projet complet n'est pas terminé : les lots 6 à 10 restent à faire avant de déclarer la refonte achevée.
+- La fusion multi-source persistée dépend du moteur d'ingestion Lot 3 non présent sur cette branche reprise depuis main ; ce lot démontre les payloads conflictuels et le fallback provider côté framework.
+
+### Commandes exécutées
+- `python manage.py makemigrations providers` : OK, création de `providers/0003_manualproviderrecord`.
+- `ruff check providers tests/providers/test_manual_fixture_providers_lot5.py` : OK.
+- `pytest -q tests/providers/test_manual_fixture_providers_lot5.py` : OK, 7 passed.
+- `ruff check .` : OK.
+- `python manage.py check` : OK.
+- `python manage.py makemigrations --check` : OK, aucune migration manquante.
+- `pytest -q` : OK, 26 passed, 9 warnings de dépréciation Django/Python sans échec.
+
+### Éléments restant à traiter
+- Lot 6 : bascule catalogue vers ingestion locale, recherche locale, admin/API adaptées et maintien routes legacy.
+- Lot 7 : live canonique, snapshots, notifications découplées, polling adaptatif et fraîcheur.
+- Lot 8 : migration legacy PCS complète et suppression des dépendances de bypass runtime.
+- Lot 9 : premier provider réel légalement exploitable si disponible.
+- Lot 10 : documentation finale, Docker/env, déploiement et rollback.

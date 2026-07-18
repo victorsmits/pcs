@@ -17,6 +17,9 @@ class ProviderRegistry:
             raise ProviderError(f'provider already registered: {provider.key}')
         self._providers[provider.key] = provider
 
+    def __contains__(self, key: str) -> bool:
+        return key in self._providers
+
     def get(self, key: str, *, require_enabled: bool = True) -> CyclingProvider:
         provider = self._providers[key]
         if require_enabled and key not in set(settings.PROVIDERS_ENABLED):

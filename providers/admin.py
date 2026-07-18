@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Provider, ProviderEntityMapping, ProviderRequestLog, ProviderSnapshot
+from .models import ManualProviderRecord, Provider, ProviderEntityMapping, ProviderRequestLog, ProviderSnapshot
 
 
 @admin.register(Provider)
@@ -29,3 +29,10 @@ class ProviderRequestLogAdmin(admin.ModelAdmin):
     list_display = ('provider', 'method', 'url', 'status_code', 'duration_ms', 'success', 'created_at')
     list_filter = ('provider', 'success', 'status_code')
     search_fields = ('url', 'error')
+
+
+@admin.register(ManualProviderRecord)
+class ManualProviderRecordAdmin(admin.ModelAdmin):
+    list_display = ('capability', 'resource_key', 'active', 'author', 'updated_at')
+    list_filter = ('capability', 'active')
+    search_fields = ('resource_key', 'author', 'justification')

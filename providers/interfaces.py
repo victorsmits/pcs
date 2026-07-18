@@ -59,6 +59,10 @@ class CyclingProvider(ABC):
         self._require(ProviderCapability.CALENDAR)
         raise NotImplementedError
 
+    def fetch_race_series(self) -> ProviderBatch:
+        self._require(ProviderCapability.RACE_SERIES)
+        raise NotImplementedError
+
     def fetch_race_edition(self, query: RaceEditionQuery) -> ProviderBatch:
         self._require(ProviderCapability.RACE_EDITIONS)
         raise NotImplementedError
