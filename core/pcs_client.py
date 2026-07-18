@@ -1,7 +1,7 @@
-"""Client HTTP PCS avec contournement Cloudflare, cache et politesse.
+"""Client legacy PCS désactivé par défaut.
 
-Backends, par ordre de préférence : curl_cffi (meilleur fingerprint TLS) →
-cloudscraper → requests. La session est globale et réutilisée.
+Ce module ne doit être utilisé que pour une compatibilité transitoire locale lorsque
+``PCS_LEGACY_ENABLED=True``. Le runtime normal de CycloStats ne contacte plus PCS.
 """
 import logging
 import time
@@ -13,6 +13,10 @@ from django.core.cache import cache
 from core import pcs_circuit
 
 logger = logging.getLogger('core')
+
+
+class PCSLegacyDisabledError(RuntimeError):
+    """Levée quand un appel legacy PCS est tenté alors que le kill switch est désactivé."""
 
 
 class PCSAccessForbiddenError(Exception):
@@ -38,31 +42,19 @@ _HEADERS = {
 }
 
 
+def _ensure_legacy_enabled():
+    if not getattr(settings, 'PCS_LEGACY_ENABLED', False):
+        raise PCSLegacyDisabledError('Legacy PCS access is disabled by PCS_LEGACY_ENABLED=False')
+
+
 def _build_session():
     global _backend
-    try:
-        from curl_cffi.requests import Session
-        _backend = 'curl_cffi'
-        logger.info('PCS backend: curl_cffi')
-        return Session(impersonate='chrome', headers=_HEADERS)
-    except ImportError:
-        pass
-    try:
-        import cloudscraper
-        s = cloudscraper.create_scraper(
-            browser={'browser': 'chrome', 'platform': 'linux', 'mobile': False}, delay=5,
-        )
-        s.headers.update(_HEADERS)
-        _backend = 'cloudscraper'
-        logger.info('PCS backend: cloudscraper')
-        return s
-    except ImportError:
-        pass
+    _ensure_legacy_enabled()
     import requests
     s = requests.Session()
     s.headers.update(_HEADERS)
     _backend = 'requests'
-    logger.warning('PCS backend: requests (Cloudflare bypass improbable)')
+    logger.info('PCS legacy backend: requests')
     return s
 
 
@@ -81,7 +73,8 @@ def reset_session():
 
 
 def fetch_text(url, *, cache_ttl=3600, referer=None, force=False, max_retries=3):
-    """Récupère le texte brut d'une URL PCS (avec cache + circuit breaker)."""
+    """Récupère le texte brut d'une URL PCS legacy si explicitement autorisé."""
+    _ensure_legacy_enabled()
     state = pcs_circuit.current_state()
     if state.open:
         logger.warning(
@@ -175,7 +168,8 @@ def get_json(url, *, cache_ttl=10, referer=None, force=False):
 
 
 def fetch_bytes(url, *, cache_ttl=86400, force=False):
-    """Récupère le contenu binaire d'une URL (images), avec cache."""
+    """Récupère le contenu binaire d'une URL legacy si explicitement autorisé."""
+    _ensure_legacy_enabled()
     import base64
     cache_key = f'pcs_bytes::{url}'
     if not force and cache_ttl:

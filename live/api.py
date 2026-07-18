@@ -1,33 +1,22 @@
 """API JSON live (polling front) + abonnements push."""
 import json
 import re
-from datetime import date, timedelta
+from datetime import timedelta
 
 from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from catalog.models import Race, Stage
 from live.models import LiveSession, PushSubscription, RaceFollow
-from live import services
 
 STALE_AFTER = timedelta(seconds=20)
 
 
 def _maybe_refresh(session):
-    """En dev (ou si le worker ne tourne pas), rafraîchit si la session est active et périmée."""
-    if not session or not session.is_active:
-        return session
-    stale = (session.last_polled_at is None) or (timezone.now() - session.last_polled_at > STALE_AFTER)
-    if stale:
-        try:
-            services.sync_live_session(session.stage, force=True)
-            session.refresh_from_db()
-        except Exception:  # noqa: BLE001
-            pass
+    """No-op: web/API requests must never refresh an external provider."""
     return session
 
 
