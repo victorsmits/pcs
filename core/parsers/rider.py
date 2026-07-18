@@ -2,7 +2,6 @@
 import re
 from datetime import date
 
-from core.parsers.common import slug_from_href
 
 _MONTHS = {m: i for i, m in enumerate(
     ['january', 'february', 'march', 'april', 'may', 'june', 'july',

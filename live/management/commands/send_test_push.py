@@ -5,7 +5,6 @@ Usage :
     python manage.py send_test_push --endpoint URL   # à un appareil précis
     python manage.py send_test_push --race tour-de-france --year 2026  # aux abonnés d'une course
 """
-from django.conf import settings
 from django.core.management.base import BaseCommand
 
 from live.models import PushSubscription

@@ -1,6 +1,6 @@
 """Helpers de parsing PCS partagés."""
 import re
-from datetime import date, datetime
+from datetime import date
 
 _ORDINAL_PREFIX = re.compile(r'^\d+(st|nd|rd|th)\s*', re.IGNORECASE)
 _CLASS_SUFFIX = re.compile(r'\s*\([^)]*\)\s*$')

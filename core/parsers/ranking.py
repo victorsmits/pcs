@@ -1,5 +1,4 @@
 """Parser du classement PCS (rankings/{me,we}/individual)."""
-import re
 
 from core.parsers.common import slug_from_href, parse_int
 

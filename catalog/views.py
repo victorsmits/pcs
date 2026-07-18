@@ -8,7 +8,6 @@ from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 
 from catalog.models import Race, Stage, Rider, Team, Ranking, Result, ClassificationType
-from catalog import services
 from catalog.profile_svg import build_profile_svg
 
 
@@ -47,11 +46,6 @@ def race_go_live(request, slug, year):
     """Redirige vers la page live de l'étape du jour (ou la course si pas d'étape)."""
     race = get_object_or_404(Race, slug=slug, year=year)
     if race.is_stage_race:
-        if not race.stages.exists():
-            try:
-                services.sync_race_detail(race)
-            except Exception:  # noqa: BLE001
-                pass
         today = date.today()
         stage = (race.stages.filter(date=today).first()
                  or race.stages.filter(date__lte=today).order_by('-date').first()
@@ -135,11 +129,6 @@ def rankings(request):
     if gender not in ('me', 'we'):
         gender = 'me'
     year = date.today().year
-    if not Ranking.objects.filter(kind=Ranking.Kind.PCS, year=year, gender=gender).exists():
-        try:
-            services.sync_pcs_ranking(year, gender)
-        except Exception:  # noqa: BLE001
-            pass
     ranking = (Ranking.objects.filter(kind=Ranking.Kind.PCS, year=year, gender=gender)
                .select_related('rider', 'rider__current_team').order_by('rank')[:100])
     return render(request, 'catalog/rankings.html', {
@@ -150,17 +139,8 @@ def rankings(request):
 def race_detail(request, slug, year):
     race = Race.objects.filter(slug=slug, year=year).first()
     if not race:
-        # Édition absente : on la crée si la course existe pour une autre année
-        if Race.objects.filter(slug=slug).exists():
-            race = services.ensure_edition(slug, year)
-        else:
-            from django.http import Http404
-            raise Http404('Course introuvable')
-    if not race.detail_synced_at:
-        try:
-            services.sync_race_detail(race)
-        except Exception:  # noqa: BLE001
-            pass
+        from django.http import Http404
+        raise Http404('Course introuvable')
     stages = race.stages.all().order_by('number').select_related('winner')
 
     today = date.today()
@@ -170,14 +150,6 @@ def race_detail(request, slug, year):
     gc_provisional = False
     race_started = bool(race.start_date and race.start_date <= today)
     if race.is_stage_race:
-        # Une course non démarrée n'a pas de GC : inutile (et coûteux) de scraper.
-        # En course : on rafraîchit le GC provisoire à chaque visite.
-        has_gc = Result.objects.filter(race=race, classification=ClassificationType.GC).exists()
-        if race_started and (is_ongoing or not has_gc):
-            try:
-                services.sync_gc(race, force=is_ongoing)
-            except Exception:  # noqa: BLE001
-                pass
         gc = list(Result.objects.filter(race=race, classification=ClassificationType.GC)
                   .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
         gc_provisional = is_ongoing and bool(gc) and not any(r.time_gap for r in gc)
@@ -185,23 +157,12 @@ def race_detail(request, slug, year):
     # Porteurs de maillots (depuis la dernière étape disputée)
     jersey_riders = []
     if race.is_stage_race and race_started and (gc or stages):
-        try:
-            jersey_riders = services.get_jersey_wearers(race)
-        except Exception:  # noqa: BLE001
-            pass
+        jersey_riders = []
     else:
-        if race_started and not Result.objects.filter(race=race, stage__isnull=True).exists():
-            try:
-                services.sync_oneday_result(race)
-            except Exception:  # noqa: BLE001
-                pass
         oneday = (Result.objects.filter(race=race, stage__isnull=True)
                   .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
 
-    try:
-        years = services.get_race_years(race)
-    except Exception:  # noqa: BLE001
-        years = [race.year]
+    years = list(Race.objects.filter(slug=race.slug).order_by('-year').values_list('year', flat=True)) or [race.year]
 
     return render(request, 'catalog/race_detail.html', {
         'race': race, 'stages': stages, 'gc': gc, 'oneday': oneday,
@@ -225,7 +186,7 @@ def search(request):
     """Page de résultats complète (locale + PCS = globale)."""
     from catalog.search import search_all
     q = request.GET.get('q', '').strip()
-    results = search_all(q, limit=12, include_pcs=True) if len(q) >= 2 else {'riders': [], 'teams': [], 'races': []}
+    results = search_all(q, limit=12, include_pcs=False) if len(q) >= 2 else {'riders': [], 'teams': [], 'races': []}
     total = sum(len(results[k]) for k in results)
     groups = [
         ('Coureurs', results['riders'], 'rider'),
@@ -243,11 +204,6 @@ def startlist(request, slug, year):
     import json
     race = get_object_or_404(Race, slug=slug, year=year)
     from catalog.models import StartListEntry
-    if not StartListEntry.objects.filter(race=race).exists():
-        try:
-            services.sync_startlist(race)
-        except Exception:  # noqa: BLE001
-            pass
     entries = (StartListEntry.objects.filter(race=race)
                .select_related('rider', 'team').order_by('bib'))
     data = [{
@@ -267,45 +223,24 @@ def startlist(request, slug, year):
 def race_history(request, slug, year):
     """Endpoint JSON : éditions précédentes + vainqueurs (backfill paresseux, caché)."""
     race = get_object_or_404(Race, slug=slug, year=year)
-    editions = services.get_past_editions(race, n=6)
+    editions = (Race.objects.filter(slug=race.slug).exclude(pk=race.pk)
+                .select_related('winner').order_by('-year')[:6])
     return JsonResponse({'editions': [
         {
-            'year': e['year'],
-            'url': e['race'].get_absolute_url(),
-            'winner': e['winner'].name,
-            'winner_url': e['winner'].get_absolute_url(),
+            'year': e.year,
+            'url': e.get_absolute_url(),
+            'winner': e.winner.name if e.winner else '',
+            'winner_url': e.winner.get_absolute_url() if e.winner else '',
         } for e in editions
     ]})
 
 
 def stage_detail(request, slug, year, number):
     stage = get_object_or_404(Stage, race__slug=slug, race__year=year, number=number)
-    if not stage.detail_synced_at:
-        try:
-            services.sync_stage_detail(stage)
-        except Exception:  # noqa: BLE001
-            pass
-    # Étape déjà synchronisée mais sans profil vectoriel → on reconstruit depuis l'image
-    elif not stage.elevation_points and stage.profile_image_url:
-        try:
-            services.backfill_profile_from_image(stage)
-        except Exception:  # noqa: BLE001
-            pass
-    # Profil image déjà extrait mais sans échelle chiffrée → on tente l'OCR de l'axe (une fois)
-    elif stage.profile_from_image and stage.min_elevation is None and stage.profile_image_url:
-        try:
-            services.backfill_profile_scale(stage)
-        except Exception:  # noqa: BLE001
-            pass
     climbs = [{'km': c.km, 'name': c.name, 'category': c.category} for c in stage.climbs.all()]
     profile = build_profile_svg(stage.elevation_points, stage.min_elevation,
                                 stage.max_elevation, stage.distance, climbs=climbs)
 
-    if not Result.objects.filter(stage=stage, classification=ClassificationType.STAGE).exists():
-        try:
-            services.sync_stage_results(stage)
-        except Exception:  # noqa: BLE001
-            pass
     results = (Result.objects.filter(stage=stage, classification=ClassificationType.STAGE)
                .select_related('rider', 'team').order_by(F('rank').asc(nulls_last=True))[:30])
 
@@ -317,26 +252,14 @@ def stage_detail(request, slug, year, number):
 
 def rider_detail(request, slug):
     rider = get_object_or_404(Rider, slug=slug)
-    data = None
-    try:
-        data = services.sync_rider(rider, force=not rider.detail_synced_at)
-        rider.refresh_from_db()
-    except Exception:  # noqa: BLE001
-        pass
     return render(request, 'catalog/rider_detail.html', {
-        'rider': rider, 'top_results': (data or {}).get('top_results', []),
+        'rider': rider, 'top_results': [],
         'page_title': rider.name,
     })
 
 
 def team_detail(request, slug, year):
     team = get_object_or_404(Team, slug=slug, year=year)
-    if not team.detail_synced_at:
-        try:
-            services.sync_team(team)
-            team.refresh_from_db()
-        except Exception:  # noqa: BLE001
-            pass
     roster = (Rider.objects.filter(memberships__team=team, memberships__year=year)
               .order_by('name').distinct())
     return render(request, 'catalog/team_detail.html', {

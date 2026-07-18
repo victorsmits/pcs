@@ -21,6 +21,7 @@ class _Response:
     PCS_403_THRESHOLD=2,
     PCS_CIRCUIT_BACKOFFS=(60, 300, 900),
     PCS_CIRCUIT_JITTER=0,
+    PCS_LEGACY_ENABLED=True,
 )
 class PCSCircuitBreakerTests(SimpleTestCase):
     def setUp(self):

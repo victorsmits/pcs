@@ -1,4 +1,6 @@
-"""Modèles « catalogue » : données froides/tièdes synchronisées depuis PCS."""
+"""Modèles catalogue canoniques et compatibilité legacy additive."""
+import uuid
+
 from django.db import models
 from django.urls import reverse
 
@@ -61,10 +63,57 @@ class ResultStatus(models.TextChoices):
     DSQ = 'dsq', 'Disqualifié'
 
 
+class RaceDiscipline(models.TextChoices):
+    ROAD = 'road', 'Route'
+
+
+class RaceFormat(models.TextChoices):
+    ONE_DAY = 'one_day', "Course d'un jour"
+    STAGE_RACE = 'stage_race', 'Course par étapes'
+    CHAMPIONSHIP_ROAD_RACE = 'championship_road_race', 'Championnat route'
+    CHAMPIONSHIP_ITT = 'championship_itt', 'Championnat contre-la-montre'
+
+
+class RaceScope(models.TextChoices):
+    REGULAR = 'regular', 'Régulier'
+    WORLD_CHAMPIONSHIP = 'world_championship', 'Championnat du monde'
+    CONTINENTAL_CHAMPIONSHIP = 'continental_championship', 'Championnat continental'
+    NATIONAL_CHAMPIONSHIP = 'national_championship', 'Championnat national'
+    OLYMPIC = 'olympic', 'Jeux olympiques'
+
+
+class RaceImportance(models.TextChoices):
+    P0 = 'P0', 'P0'
+    P1 = 'P1', 'P1'
+    P2 = 'P2', 'P2'
+    P3 = 'P3', 'P3'
+
+
+class EditionStatus(models.TextChoices):
+    SCHEDULED = 'scheduled', 'Planifiée'
+    ACTIVE = 'active', 'Active'
+    FINISHED = 'finished', 'Terminée'
+    CANCELLED = 'cancelled', 'Annulée'
+    UNKNOWN = 'unknown', 'Inconnu'
+
+
+class CanonicalStageKind(models.TextChoices):
+    ROAD = 'road', 'Route'
+    ITT = 'itt', 'Contre-la-montre individuel'
+    TTT = 'ttt', 'Contre-la-montre par équipes'
+    PROLOGUE = 'prologue', 'Prologue'
+    SPLIT_STAGE = 'split_stage', 'Demi-étape'
+
+
 # ---------------------------------------------------------------------------
 # Coureurs & équipes
 # ---------------------------------------------------------------------------
 class Rider(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    canonical_slug = models.SlugField(max_length=220, blank=True, db_index=True)
+    normalized_name = models.CharField(max_length=220, blank=True, db_index=True)
+    gender_category = models.CharField(max_length=2, choices=Category.choices, default=Category.ME)
+    metadata = models.JSONField(default=dict, blank=True)
     slug = models.SlugField(max_length=200, unique=True)
     pcs_id = models.IntegerField(null=True, blank=True, db_index=True)
     name = models.CharField(max_length=200)
@@ -93,6 +142,10 @@ class Rider(models.Model):
 
 
 class Team(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    identity = models.ForeignKey(
+        'TeamIdentity', on_delete=models.SET_NULL, null=True, blank=True, related_name='seasons'
+    )
     slug = models.SlugField(max_length=200)
     year = models.IntegerField()
     pcs_id = models.IntegerField(null=True, blank=True, db_index=True)
@@ -118,6 +171,25 @@ class Team(models.Model):
         return reverse('catalog:team_detail', kwargs={'slug': self.slug, 'year': self.year})
 
 
+class TeamIdentity(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    canonical_slug = models.SlugField(max_length=220, unique=True)
+    current_name = models.CharField(max_length=220)
+    primary_country = models.CharField(max_length=3, blank=True)
+    aliases = models.JSONField(default=list, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Identité d'équipe"
+        verbose_name_plural = "Identités d'équipe"
+        ordering = ['current_name']
+
+    def __str__(self):
+        return self.current_name
+
+
 class Membership(models.Model):
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='memberships')
     rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name='memberships')
@@ -135,7 +207,64 @@ class Membership(models.Model):
 # ---------------------------------------------------------------------------
 # Courses & étapes
 # ---------------------------------------------------------------------------
+class RaceSeries(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True)
+    canonical_slug = models.SlugField(max_length=220, unique=True)
+    current_name = models.CharField(max_length=220)
+    gender_category = models.CharField(max_length=2, choices=Category.choices, default=Category.ME)
+    discipline = models.CharField(max_length=20, choices=RaceDiscipline.choices, default=RaceDiscipline.ROAD)
+    format = models.CharField(max_length=40, choices=RaceFormat.choices, default=RaceFormat.ONE_DAY)
+    scope = models.CharField(max_length=40, choices=RaceScope.choices, default=RaceScope.REGULAR)
+    primary_country = models.CharField(max_length=3, blank=True)
+    importance = models.CharField(max_length=2, choices=RaceImportance.choices, default=RaceImportance.P3)
+    active = models.BooleanField(default=True)
+    aliases = models.JSONField(default=list, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Série de course'
+        verbose_name_plural = 'Séries de courses'
+        ordering = ['current_name']
+        indexes = [
+            models.Index(fields=['gender_category', 'discipline']),
+            models.Index(fields=['scope']),
+            models.Index(fields=['importance']),
+            models.Index(fields=['active']),
+        ]
+
+    def __str__(self):
+        return self.current_name
+
+
+class RaceSeriesAlias(models.Model):
+    series = models.ForeignKey(RaceSeries, on_delete=models.CASCADE, related_name='series_aliases')
+    name = models.CharField(max_length=220)
+    normalized_name = models.CharField(max_length=220, db_index=True)
+    valid_from_year = models.IntegerField(null=True, blank=True)
+    valid_to_year = models.IntegerField(null=True, blank=True)
+    locale = models.CharField(max_length=12, default='und')
+
+    class Meta:
+        verbose_name = 'Alias de série'
+        verbose_name_plural = 'Alias de séries'
+        unique_together = [('series', 'normalized_name', 'valid_from_year', 'valid_to_year', 'locale')]
+        indexes = [models.Index(fields=['normalized_name'])]
+
+    def __str__(self):
+        return self.name
+
+
 class Race(models.Model):
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    series = models.ForeignKey(RaceSeries, on_delete=models.SET_NULL, null=True, blank=True, related_name='editions')
+    official_name = models.CharField(max_length=220, blank=True)
+    status = models.CharField(max_length=20, choices=EditionStatus.choices, default=EditionStatus.UNKNOWN)
+    host_country = models.CharField(max_length=3, blank=True)
+    start_location = models.CharField(max_length=120, blank=True)
+    finish_location = models.CharField(max_length=120, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
     slug = models.SlugField(max_length=200)
     year = models.IntegerField()
     pcs_id = models.IntegerField(null=True, blank=True, db_index=True)
@@ -182,6 +311,13 @@ class Race(models.Model):
 class Stage(models.Model):
     race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='stages')
     number = models.IntegerField()
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    stage_key = models.CharField(max_length=40, blank=True, db_index=True)
+    sequence = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    display_label = models.CharField(max_length=60, blank=True)
+    stage_kind = models.CharField(max_length=20, choices=CanonicalStageKind.choices, default=CanonicalStageKind.ROAD)
+    route_geometry = models.JSONField(default=dict, blank=True)
+    profile_metadata = models.JSONField(default=dict, blank=True)
     name = models.CharField(max_length=200, blank=True)
     date = models.DateField(null=True, blank=True)
     departure = models.CharField(max_length=120, blank=True)
@@ -253,6 +389,12 @@ class Climb(models.Model):
 # ---------------------------------------------------------------------------
 class StartListEntry(models.Model):
     race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='startlist')
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
+    stage = models.ForeignKey(Stage, on_delete=models.CASCADE, null=True, blank=True, related_name='startlist')
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    withdrawn_at = models.DateTimeField(null=True, blank=True)
+    source_updated_at = models.DateTimeField(null=True, blank=True)
+    role = models.CharField(max_length=30, blank=True)
     rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name='startlist_entries')
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='startlist_entries')
     bib = models.IntegerField(null=True, blank=True)
@@ -269,14 +411,21 @@ class StartListEntry(models.Model):
 
 class Result(models.Model):
     race = models.ForeignKey(Race, on_delete=models.CASCADE, related_name='results')
+    public_id = models.UUIDField(default=uuid.uuid4, db_index=True)
     stage = models.ForeignKey(Stage, on_delete=models.CASCADE, null=True, blank=True, related_name='results')
     rider = models.ForeignKey(Rider, on_delete=models.CASCADE, related_name='results')
     team = models.ForeignKey(Team, on_delete=models.SET_NULL, null=True, blank=True, related_name='results')
     classification = models.CharField(max_length=10, choices=ClassificationType.choices, default=ClassificationType.STAGE)
     rank = models.IntegerField(null=True, blank=True)
     time = models.DurationField(null=True, blank=True)
+    elapsed_time_ms = models.BigIntegerField(null=True, blank=True)
+    gap_ms = models.BigIntegerField(null=True, blank=True)
+    gap_laps = models.IntegerField(null=True, blank=True)
     time_gap = models.CharField(max_length=30, blank=True)
     bonus = models.CharField(max_length=20, blank=True)
+    bonus_seconds = models.IntegerField(null=True, blank=True)
+    penalty_seconds = models.IntegerField(null=True, blank=True)
+    raw_display_time = models.CharField(max_length=60, blank=True)
     points_uci = models.IntegerField(null=True, blank=True)
     points_pcs = models.IntegerField(null=True, blank=True)
     status = models.CharField(max_length=10, choices=ResultStatus.choices, default=ResultStatus.OK)
